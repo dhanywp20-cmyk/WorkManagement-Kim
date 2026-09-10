@@ -1,6 +1,6 @@
 /**
- * lib/kelompok.ts - daftar KELOMPOK kerja beserta hak loncengnya, dan lingkup
- * kelompok yang dibawahi tiap Manager. Semuanya dari database, bukan kode.
+ * lib/kelompok.ts - daftar KELOMPOK kerja, dan lingkup kelompok yang dibawahi
+ * tiap Manager. Semuanya dari database, bukan kode.
  *
  * Yang dulu terpaku di kode dan hanya bisa diubah lewat deploy:
  *
@@ -9,35 +9,17 @@
  *      baru berarti menyunting semuanya - dan yang terlewat akan membuat
  *      kelompok itu tidak muncul di sebagian menu, tanpa pesan apa pun.
  *
- *   2. Siapa yang berhak melihat lonceng notifikasi mana. Dulu berupa deretan
- *      syarat di modal-notifikasi.tsx yang menyebut nama kelompok satu per
- *      satu. Persis itulah sebabnya Team PTS MVI tidak pernah dapat lonceng
- *      Ticket, Require, dan Review: namanya memang tidak pernah disebut.
- *
- *   3. Kelompok mana saja yang dibawahi seorang Manager. Sebelumnya tidak ada
+ *   2. Kelompok mana saja yang dibawahi seorang Manager. Sebelumnya tidak ada
  *      sama sekali - akun ber-Full Access melihat SELURUH pekerjaan PTS,
  *      termasuk kelompok yang bukan tanggung jawabnya.
  *
- * Ketiganya sekarang tersimpan di `app_settings` dan disunting dari Admin
+ * Keduanya sekarang tersimpan di `app_settings` dan disunting dari Admin
  * Panel. NILAI BAWAAN DI BAWAH MENIRU PERSIS perilaku yang berlaku sekarang,
  * jadi selama pengaturannya belum ada, tidak ada satu pun akun yang berubah
  * haknya.
  */
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
-
-// Lonceng
-
-/** Lonceng notifikasi di pojok kanan atas dashboard. */
-export const SEMUA_LONCENG = ['tiket', 'require', 'jadwal', 'review'] as const;
-export type Lonceng = typeof SEMUA_LONCENG[number];
-
-export const LABEL_LONCENG: Record<Lonceng, { ikon: string; label: string }> = {
-  tiket:   { ikon: '🎫', label: 'Ticket' },
-  require: { ikon: '🏗️', label: 'Require' },
-  jadwal:  { ikon: '🗓️', label: 'Reminder' },
-  review:  { ikon: '⭐', label: 'Review' },
-};
 
 // Kelompok
 
@@ -82,31 +64,16 @@ export interface Kelompok {
    * diterapkan ke akun yang sudah ada lewat tombol di Admin Panel -> Kelompok.
    */
   dashboard: 'team' | 'sales';
-  /** Lonceng yang boleh dilihat anggota kelompok ini. */
-  lonceng: Lonceng[];
   aktif: boolean;
 }
 
-const EMPAT: Lonceng[] = ['tiket', 'require', 'jadwal', 'review'];
-
-/**
- * Bawaan - MENIRU PERSIS syarat yang sebelumnya tertulis di
- * modal-notifikasi.tsx, bukan menebak apa yang "sebaiknya":
- *
- *   Ticket & Require : semua, KECUALI Team PTS UMP
- *   Reminder         : semua tanpa kecuali
- *   Review           : semua, KECUALI Team PTS UMP dan Team Services
- *
- * Menyimpangkan salah satunya di sini berarti diam-diam mengubah hak orang
- * yang sedang bekerja.
- */
 export const KELOMPOK_BAWAAN: Kelompok[] = [
-  { nama: 'Team PTS IVP', label: 'PTS IVP',   jenis: 'pts',       ditugaskan: true,  cabang: false, dashboard: 'team', aktif: true, lonceng: EMPAT },
-  { nama: 'Team PTS MVI', label: 'PTS MVI',   jenis: 'pts',       ditugaskan: true,  cabang: false, dashboard: 'team', aktif: true, lonceng: EMPAT },
-  { nama: 'Team PTS UMP', label: 'PTS UMP',   jenis: 'pts',       ditugaskan: false, cabang: false, dashboard: 'team', aktif: true, lonceng: ['jadwal'] },
-  { nama: 'Team Services', label: 'Services', jenis: 'services',  ditugaskan: false, cabang: false, dashboard: 'team', aktif: true, lonceng: ['tiket', 'require', 'jadwal'] },
-  { nama: 'Marketing',    label: 'Marketing', jenis: 'marketing', ditugaskan: false, cabang: false, dashboard: 'team', aktif: true, lonceng: EMPAT },
-  { nama: '',             label: 'Sales',     jenis: 'sales',     ditugaskan: false, cabang: false, dashboard: 'team', aktif: true, lonceng: EMPAT },
+  { nama: 'Team PTS IVP', label: 'PTS IVP',   jenis: 'pts',       ditugaskan: true,  cabang: false, dashboard: 'team', aktif: true },
+  { nama: 'Team PTS MVI', label: 'PTS MVI',   jenis: 'pts',       ditugaskan: true,  cabang: false, dashboard: 'team', aktif: true },
+  { nama: 'Team PTS UMP', label: 'PTS UMP',   jenis: 'pts',       ditugaskan: false, cabang: false, dashboard: 'team', aktif: true },
+  { nama: 'Team Services', label: 'Services', jenis: 'services',  ditugaskan: false, cabang: false, dashboard: 'team', aktif: true },
+  { nama: 'Marketing',    label: 'Marketing', jenis: 'marketing', ditugaskan: false, cabang: false, dashboard: 'team', aktif: true },
+  { nama: '',             label: 'Sales',     jenis: 'sales',     ditugaskan: false, cabang: false, dashboard: 'team', aktif: true },
 ];
 
 export const KUNCI_KELOMPOK = 'kelompok';
@@ -281,25 +248,6 @@ export function bolehLihatKelompok(userId: string | null | undefined, teamType?:
   return lingkupSaya(userId).includes(t);
 }
 
-/**
- * Apakah lonceng ini tampil untuk akun tersebut.
- *
- * Admin melihat semuanya - hak itu memang tidak bergantung kelompok. Selain
- * itu, jawabannya diambil dari kelompok si akun; kelompok yang tidak dikenal
- * (data lama, team_type yang belum didaftarkan) mendapat semua lonceng, sama
- * seperti sebelum pengaturan ini ada.
- */
-export function loncengTampil(opts: {
-  peranAdmin: boolean;
-  teamType?: string | null;
-  lonceng: Lonceng;
-}): boolean {
-  if (opts.peranAdmin) return true;
-  const k = cariKelompok(opts.teamType);
-  if (!k) return true;
-  return k.lonceng.includes(opts.lonceng);
-}
-
 // Pemuatan
 
 let pemuatan: Promise<void> | null = null;
@@ -319,9 +267,6 @@ function rapikanKelompok(x: unknown): Kelompok | null {
   const o = x as Record<string, unknown>;
   if (typeof o.nama !== 'string') return null;
   const jenis = o.jenis as JenisKelompok;
-  const lonceng = Array.isArray(o.lonceng)
-    ? (o.lonceng.filter(l => (SEMUA_LONCENG as readonly string[]).includes(l as string)) as Lonceng[])
-    : [];
   return {
     nama: o.nama.trim(),
     label: typeof o.label === 'string' && o.label.trim() ? o.label.trim() : (o.nama.trim() || 'Sales'),
@@ -329,7 +274,6 @@ function rapikanKelompok(x: unknown): Kelompok | null {
     ditugaskan: o.ditugaskan === true,
     cabang: o.cabang === true,
     dashboard: o.dashboard === 'sales' ? 'sales' : 'team',
-    lonceng,
     aktif: o.aktif !== false,
   };
 }

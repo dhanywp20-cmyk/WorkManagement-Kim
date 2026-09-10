@@ -10,13 +10,11 @@ import {
   JABATAN_LIST, JabatanType, JABATAN_CONFIG, JABATAN_CC_RULES,
   ALL_MENU_KEYS, ALL_MENU_LABELS, ROLE_BADGE,
   NotifBellProps, AdminPanelModalProps,
-  DISPLAY_BRANDS_DB, MIDDLEWARE_BRANDS_DB, BrandPicMappingDB,
 } from './_components/shared';
 import {
   AccountSettingsModal, UserProfileModal, UserManagementModal,
-  BrandPicSettingModal, NotifBell, NotificationBar,
-  BrandPicSettingContent, AdminPanelModal,
-  AccountSettingsInline, UserManagementInline, BrandPicSettingInline,
+  NotifBell, NotificationBar, AdminPanelModal,
+  AccountSettingsInline, UserManagementInline,
 } from './_components/Modals';
 import GlobalSearch from './_components/GlobalSearch';
 import PermissionAwareDashboard from './_components/widgets/PermissionAwareDashboard';
@@ -147,7 +145,7 @@ export default function Dashboard() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
 
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminPanelTab, setAdminPanelTab] = useState<'settings' | 'userManagement' | 'picBrand'>('settings');
+  const [adminPanelTab, setAdminPanelTab] = useState<'settings' | 'userManagement'>('settings');
   /**
    * Dua antrean yang menunggu tindakan admin, sengaja DIPISAH karena
    * diselesaikan di tempat berbeda: pendingUsers di Admin Panel > User
@@ -435,7 +433,7 @@ export default function Dashboard() {
     // "admin:<tab>" sengaja BUKAN route sungguhan, dikenali khusus di sini.
     if (navInternalUrl.startsWith('admin:')) {
       const tab = navInternalUrl.slice('admin:'.length);
-      if (tab === 'settings' || tab === 'userManagement' || tab === 'picBrand') setAdminPanelTab(tab);
+      if (tab === 'settings' || tab === 'userManagement') setAdminPanelTab(tab);
       setShowAdminPanel(true);
       return;
     }

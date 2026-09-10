@@ -136,18 +136,6 @@ export const ROLE_BADGE: Record<string, string> = {
 };
 
 
-// Brand mappings (from BrandPicSettingModal section)
-export const DISPLAY_BRANDS_DB = ['Microvision', 'Philips', 'Panasonic', 'Newline', 'Promethean', 'Maxhub', 'Ledman', 'Taniled', 'Vivitek'];
-export const MIDDLEWARE_BRANDS_DB = ['Tricolor', 'Wyrestorm', 'Extron', 'Crestron', 'AVCiT', 'Brightsign', 'Cue'];
-
-export interface BrandPicMappingDB {
-  id?: string;
-  brand_type: 'display' | 'middleware';
-  brand_name: string;
-  pic_user_id: string | null;
-  pic_user_name: string | null;
-}
-
 // Notif Bell props (from NotifBell section)
 export interface NotifBellProps {
   icon: string;
@@ -168,6 +156,6 @@ export interface NotifBellProps {
 
 // Admin Panel props
 export interface AdminPanelModalProps {
-  initialTab: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'kelompok';
+  initialTab: 'settings' | 'userManagement' | 'merek' | 'kelompok';
   onClose: () => void;
 }

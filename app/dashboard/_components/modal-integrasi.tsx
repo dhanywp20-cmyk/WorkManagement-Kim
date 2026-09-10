@@ -29,90 +29,13 @@ import {
   KANAL, bacaPengaturan, simpanPengaturan, kanalUntuk,
   type Kanal, type PengaturanNotifikasi,
 } from '@/lib/notifikasi/pengaturan';
-import { ambilPengaturanAI, simpanPengaturanAI, AI_BAWAAN, type PengaturanAI,
-  ambilPengaturanPenilai, simpanPengaturanPenilai, PENILAI_BAWAAN, type PengaturanPenilai } from '@/lib/ai-pengaturan';
 import { KATALOG_EVENT, EVENT_TERSAMBUNG, eventTersambung, type KategoriEvent } from '@/lib/notifikasi/katalog';
 import { PENYEDIA_WA, penyediaWA } from '@/lib/notifikasi/penyedia-wa';
 import { supabase } from '@/lib/supabase';
 
 const JUDUL_KATEGORI: Record<KategoriEvent, string> = {
-  ticket: 'Ticket', approval: 'Approval', assignment: 'Assignment',
-  reminder: 'Reminder', schedule: 'Jadwal', project: 'Project', system: 'Sistem',
+  system: 'Sistem',
 };
-
-/*
-  Pemilih model - daftarnya DITANYAKAN ke Google, tidak ditulis di kode.
-
-  Sebelumnya ini isian teks bebas. Nama model yang salah tidak gagal saat
-  disimpan; ia gagal nanti, saat seseorang menekan tombol AI, dengan pesan 404
-  yang tidak menyebut nama mana yang keliru. Daftar model juga berbeda antar
-  kunci dan antar wilayah, jadi daftar tertutup di kode pun akan menawarkan
-  nama yang tidak ada pada kunci ini.
-
-  Isian teks tetap ada, tapi hanya bila daftarnya tidak bisa dibaca - tanpa
-  jalan apa pun, token yang bermasalah membuat modelnya terkunci.
-*/
-function PilihModel({ nilai, profil, onGanti, warna }: {
-  nilai: string;
-  profil?: 'penilai';
-  onGanti: (m: string) => void;
-  warna: 'sky' | 'violet';
-}) {
-  const [daftar, setDaftar] = useState<{ id: string; nama: string }[]>([]);
-  const [galat, setGalat] = useState('');
-  const [memuat, setMemuat] = useState(true);
-
-  useEffect(() => {
-    let batal = false;
-    fetch(`/api/ai/model${profil ? `?profil=${profil}` : ''}`)
-      .then(async r => {
-        const d = await r.json();
-        if (!r.ok) throw new Error(d?.error?.message ?? 'Gagal membaca daftar model.');
-        return d;
-      })
-      .then(d => { if (!batal) { setDaftar(d?.model ?? []); setGalat(''); } })
-      .catch(e => { if (!batal) setGalat(e instanceof Error ? e.message : 'Gagal membaca daftar model.'); })
-      .finally(() => { if (!batal) setMemuat(false); });
-    return () => { batal = true; };
-  }, [profil]);
-
-  const fokus = warna === 'violet' ? 'focus:border-violet-400' : 'focus:border-sky-400';
-
-  if (memuat) return <p className="text-[11px] text-slate-400 py-2">Memuat daftar model…</p>;
-
-  if (daftar.length === 0) {
-    return (
-      <>
-        <input value={nilai} onChange={e => onGanti(e.target.value)}
-          aria-label="Nama model AI"
-          className={`w-full text-xs px-2.5 py-2 rounded-lg border border-amber-300 focus:outline-none ${fokus}`} />
-        <p className="text-[9px] text-amber-700 mt-1 leading-relaxed">
-          Daftar model tidak bisa dibaca{galat ? ` (${galat})` : ''} — ketik nama modelnya.
-          Periksa tokennya lebih dulu; nama yang salah baru ketahuan saat AI dipakai.
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <select value={nilai} onChange={e => onGanti(e.target.value)}
-        aria-label="Model AI"
-        className={`w-full text-xs px-2.5 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none ${fokus}`}>
-        {/* Model tersimpan yang tidak ada di daftar tetap ditampilkan - kalau
-            tidak, ia diam-diam tergantikan baris pertama dan pemakainya
-            mengira itulah yang selama ini terpakai. */}
-        {nilai && !daftar.some(m => m.id === nilai) && (
-          <option value={nilai}>{nilai} — tidak ada di daftar</option>
-        )}
-        {daftar.map(m => <option key={m.id} value={m.id}>{m.id}</option>)}
-      </select>
-      <p className="text-[9px] text-slate-400 mt-1">
-        {daftar.length} model tersedia untuk token ini — dibaca langsung dari Google, jadi tidak pernah basi.
-      </p>
-    </>
-  );
-}
 
 function Saklar({ aktif, onKlik, warna }: { aktif: boolean; onKlik: () => void; warna: string }) {
   return (
@@ -298,14 +221,11 @@ export function IntegrasiInline() {
    * notifikasi. Akibatnya hal yang paling sering disentuh terdorong jauh ke
    * bawah, dan tombol Simpan-nya lebih jauh lagi.
    */
-  const [seksi, setSeksi] = useState<'kanal' | 'wa' | 'tg' | 'tim' | 'ai'>('kanal');
+  const [seksi, setSeksi] = useState<'kanal' | 'wa' | 'tg' | 'tim'>('kanal');
   /** Siapa yang benar-benar bisa dijangkau lewat kanal apa. */
   const [tim, setTim] = useState<{ nama: string; tim: string; jabatan: string; wa: boolean; tg: boolean }[]>([]);
   /** Penyaring matriks - 22 baris terlalu banyak untuk dipindai dengan mata. */
   const [cariEvent, setCariEvent] = useState('');
-  /* Pengaturan pembuat soal AI - lihat lib/ai-pengaturan.ts. */
-  const [ai, setAi] = useState<PengaturanAI>(AI_BAWAAN);
-  const [penilai, setPenilai] = useState<PengaturanPenilai>(PENILAI_BAWAAN);
 
   const muatRahasia = async () => {
     try {
@@ -368,8 +288,6 @@ export function IntegrasiInline() {
   useEffect(() => {
     bacaPengaturan(true).then(setP);
     muatRahasia();
-    ambilPengaturanAI().then(setAi);
-    ambilPengaturanPenilai().then(setPenilai);
     void muatTim();
     void cekKoneksi('telegram');
     void cekKoneksi('whatsapp');
@@ -431,12 +349,9 @@ export function IntegrasiInline() {
 
   const simpanSekarang = async () => {
     setSimpan(true);
-    // Keduanya disimpan sekaligus. Tombol Simpan yang hanya menyimpan sebagian
-    // isi layar adalah cara paling mudah kehilangan pengaturan tanpa sadar.
-    const [r, rAi] = await Promise.all([simpanPengaturan(p), simpanPengaturanAI(ai), simpanPengaturanPenilai(penilai)]);
+    const r = await simpanPengaturan(p);
     setSimpan(false);
-    const gagal = !r.ok ? r.pesan : !rAi.ok ? rAi.pesan : null;
-    setPesan(gagal ? { tipe: 'gagal', teks: gagal }
+    setPesan(!r.ok ? { tipe: 'gagal', teks: r.pesan ?? 'Gagal menyimpan.' }
                    : { tipe: 'ok', teks: 'Pengaturan tersimpan.' });
   };
 
@@ -555,7 +470,6 @@ export function IntegrasiInline() {
     { key: 'wa',    label: 'WhatsApp' },
     { key: 'tg',    label: 'Telegram', tanda: p.aktif.telegram && koneksi.telegram.keadaan === 'putus' },
     { key: 'tim',   label: 'Jangkauan Tim', hitung: totalTim ? String(totalTim) : undefined },
-    { key: 'ai',    label: 'AI Learning Center' },
   ];
 
   const Ubin = ({ warna, nama, nilai, lencana, jenis, ket }: {
@@ -1063,107 +977,6 @@ export function IntegrasiInline() {
                   style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
                   <b>Kolom Telegram hanya bisa diisi oleh orangnya sendiri.</b> Admin tidak bisa mengisikannya —
                   Telegram baru menerbitkan Chat ID setelah orang itu menekan Start di bot.
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══ AI LEARNING CENTER ══
-              Dipindah ke bagiannya sendiri. Sebelumnya menumpuk di bawah kartu
-              Telegram di halaman yang sama - padahal ia sama sekali bukan kanal
-              notifikasi, dan justru itulah yang membuat layar ini terasa penuh. */}
-          {seksi === 'ai' && (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
-                  <h3 className="text-sm font-bold text-slate-700">Pembuat Soal AI</h3>
-                  <p className="text-[11.5px] text-slate-400 mt-0.5">Dipakai Learning Center untuk menyusun soal dari materi.</p>
-                </div>
-                <div className="p-3 space-y-3">
-                  <BlokToken
-                    judul="Token AI" kunci="ai.gemini_token" status={rahasia['ai.gemini_token']}
-                    onSimpan={n => simpanRahasia('ai.gemini_token', n)}
-                    onHapus={() => hapusRahasia('ai.gemini_token')}
-                    petunjuk={<>Ambil dari Google AI Studio (aistudio.google.com → Get API key). Token disimpan di server
-                      dan tidak pernah dikirim ke peramban.</>} />
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Model</label>
-                    <PilihModel nilai={ai.model} warna="sky" onGanti={m => setAi(x => ({ ...x, model: m }))} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Arahan topik <span className="normal-case tracking-normal font-normal text-slate-300">— opsional</span>
-                    </label>
-                    <textarea value={ai.arahan} rows={3} onChange={e => setAi(x => ({ ...x, arahan: e.target.value }))}
-                      placeholder={'Contoh:\nUtamakan topik konfigurasi videowall dan troubleshooting sinyal HDMI/HDBaseT.\nHindari pertanyaan tentang sejarah merek atau harga.'}
-                      className="w-full text-xs px-2.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-sky-400 leading-relaxed" />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Ditambahkan pada instruksi AI, bukan menggantinya — aturan bentuk soal tetap dipegang platform.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Variasi soal <span className="normal-case tracking-normal font-normal text-slate-400">({ai.suhu.toFixed(1)})</span>
-                    </label>
-                    <input type="range" min={0} max={2} step={0.1} value={ai.suhu} aria-label="Variasi soal"
-                      onChange={e => setAi(x => ({ ...x, suhu: Number(e.target.value) }))} className="w-full accent-sky-500" />
-                    <div className="flex justify-between text-[9.5px] text-slate-400">
-                      <span>0 — taat pada materi</span><span>2 — banyak variasi</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-violet-200 overflow-hidden" style={{ background: 'rgba(139,92,246,0.04)' }}>
-                <div className="px-4 py-3 border-b border-violet-100">
-                  <h3 className="text-sm font-bold text-violet-700">Penilai Jawaban Essay</h3>
-                  <p className="text-[11.5px] text-violet-400 mt-0.5">
-                    Token terpisah supaya penilaian borongan tidak menghabiskan jatah pembuat soal.
-                  </p>
-                </div>
-                <div className="p-3 space-y-3">
-                  <BlokToken
-                    judul="Token AI Koreksi" kunci="ai.gemini_token_koreksi" status={rahasia['ai.gemini_token_koreksi']}
-                    onSimpan={n => simpanRahasia('ai.gemini_token_koreksi', n)}
-                    onHapus={() => hapusRahasia('ai.gemini_token_koreksi')}
-                    petunjuk={<>Kosongkan untuk memakai Token AI pembuat soal. Isi dengan kunci dari <b>proyek Google
-                      terpisah</b> supaya jatahnya tidak berebut.</>} />
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Model penilai</label>
-                    <PilihModel nilai={penilai.model} profil="penilai" warna="violet"
-                      onGanti={m => setPenilai(x => ({ ...x, model: m }))} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Arahan penilaian <span className="normal-case tracking-normal font-normal text-slate-300">— opsional</span>
-                    </label>
-                    <textarea value={penilai.arahan} rows={3} onChange={e => setPenilai(x => ({ ...x, arahan: e.target.value }))}
-                      placeholder={'Contoh:\nHargai jawaban yang benar secara konsep walau istilahnya tidak baku.\nJangan mengurangi nilai karena ejaan.'}
-                      className="w-full text-xs px-2.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-violet-400 leading-relaxed" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Ketaatan pada kunci <span className="normal-case tracking-normal font-normal text-slate-400">({penilai.suhu.toFixed(1)})</span>
-                    </label>
-                    <input type="range" min={0} max={2} step={0.1} value={penilai.suhu}
-                      aria-label="Ketaatan penilaian pada kunci referensi"
-                      onChange={e => setPenilai(x => ({ ...x, suhu: Number(e.target.value) }))} className="w-full accent-violet-500" />
-                    <div className="flex justify-between text-[9.5px] text-slate-400">
-                      <span>0 — taat pada kunci</span><span>2 — longgar</span>
-                    </div>
-                  </div>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input type="checkbox" checked={penilai.otomatis}
-                      onChange={e => setPenilai(x => ({ ...x, otomatis: e.target.checked }))}
-                      className="mt-0.5 w-4 h-4 rounded accent-violet-600 flex-shrink-0" />
-                    <span className="text-[11.5px] leading-snug text-slate-600">
-                      <b>Nilai otomatis saat halaman penilaian dibuka</b>
-                      <span className="block text-[10px] text-slate-400 mt-0.5">
-                        Mati secara bawaan. Bila dinyalakan, sekadar <em>membuka</em> jawaban seorang peserta sudah
-                        memakai jatah — termasuk saat penilai hanya ingin membacanya.
-                      </span>
-                    </span>
-                  </label>
                 </div>
               </div>
             </div>

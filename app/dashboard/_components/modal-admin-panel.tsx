@@ -9,7 +9,6 @@ import { muatKelompok, namaKelompokPTS, cariKelompok } from '@/lib/kelompok';
 import { StripInfo } from './modal-bersama';
 import { AccountSettingsInline } from './modal-akun';
 import { UserManagementInline } from './modal-user';
-import { BrandPicSettingInline } from './modal-brand-pic';
 import { MerekSettingInline } from './modal-merek';
 import { KelompokSettingInline } from './modal-kelompok';
 import { IntegrasiInline } from './modal-integrasi';
@@ -17,7 +16,7 @@ import { IntegrasiInline } from './modal-integrasi';
 // AdminPanelModal (unified: Settings + User Management + PIC Brand)
 
 export function AdminPanelModal({ initialTab, onClose }: AdminPanelModalProps) {
-  const [activeSection, setActiveSection] = useState<'settings' | 'userManagement' | 'picBrand' | 'merek' | 'kelompok' | 'integrasi'>(initialTab);
+  const [activeSection, setActiveSection] = useState<'settings' | 'userManagement' | 'merek' | 'kelompok' | 'integrasi'>(initialTab);
 
   /**
  * Kelompok navigasi - MENGIKUTI CARA ADMIN BERPIKIR, bukan urutan fitur
@@ -41,7 +40,7 @@ const GRUP_NAV: { key: 'organization' | 'appearance' | 'notifications'; label: s
   { key: 'notifications', label: 'Notifikasi' },
 ];
 
-const navItems: { key: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'kelompok' | 'integrasi'; group: typeof GRUP_NAV[number]['key']; label: string; icon: React.ReactElement; color: string; activeBg: string; activeBorder: string; activeText: string }[] = [
+const navItems: { key: 'settings' | 'userManagement' | 'merek' | 'kelompok' | 'integrasi'; group: typeof GRUP_NAV[number]['key']; label: string; icon: React.ReactElement; color: string; activeBg: string; activeBorder: string; activeText: string }[] = [
     {
       key: 'settings',
       group: 'organization',
@@ -57,13 +56,6 @@ const navItems: { key: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'k
       color: '#0f766e', activeBg: 'rgba(13,148,136,0.1)', activeBorder: 'rgba(13,148,136,0.4)', activeText: '#0f766e',
     },
     {
-      key: 'picBrand',
-      group: 'organization',
-      label: 'PIC Brand',
-      icon: <svg aria-hidden="true" focusable="false" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>,
-      color: '#b45309', activeBg: 'rgba(217,119,6,0.1)', activeBorder: 'rgba(217,119,6,0.4)', activeText: '#b45309',
-    },
-    {
       key: 'merek',
       group: 'appearance',
       label: 'Dashboard Setting',
@@ -72,8 +64,8 @@ const navItems: { key: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'k
     },
     {
       key: 'kelompok',
-      group: 'notifications',
-      label: 'Kelompok & Notifikasi',
+      group: 'organization',
+      label: 'Kelompok',
       icon: <svg aria-hidden="true" focusable="false" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>,
       color: '#be185d', activeBg: 'rgba(219,39,119,0.1)', activeBorder: 'rgba(219,39,119,0.4)', activeText: '#be185d',
     },
@@ -167,9 +159,8 @@ const navItems: { key: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'k
               <p className="text-slate-500 text-[10px] sm:text-xs hidden sm:block">
                 {activeSection === 'settings' && 'Kelola akun user & hak akses menu'}
                 {activeSection === 'userManagement' && 'Mapping Atasan, IVP & MVI Account & CC per User'}
-                {activeSection === 'picBrand' && 'Mapping Brand PIC per divisi & produk'}
                 {activeSection === 'merek' && 'Logo, nama, warna header & tampilan halaman login'}
-                {activeSection === 'kelompok' && 'Daftar kelompok kerja & lonceng yang boleh dilihat masing-masing'}
+                {activeSection === 'kelompok' && 'Daftar kelompok kerja - sumber dropdown Tipe PTS di form akun'}
                 {activeSection === 'integrasi' && 'Kanal notifikasi (In-App, WhatsApp, Telegram) & event mana lewat kanal mana'}
               </p>
             </div>
@@ -187,7 +178,6 @@ const navItems: { key: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'k
           <div className="flex-1 overflow-hidden">
             {activeSection === 'settings' && <AccountSettingsInline />}
             {activeSection === 'userManagement' && <UserManagementInline />}
-            {activeSection === 'picBrand' && <BrandPicSettingInline />}
             {activeSection === 'merek' && <MerekSettingInline />}
             {activeSection === 'kelompok' && <KelompokSettingInline />}
             {activeSection === 'integrasi' && (

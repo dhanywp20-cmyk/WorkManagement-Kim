@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import {
-  Kelompok, JenisKelompok, Lonceng, SEMUA_LONCENG, LABEL_LONCENG,
+  Kelompok, JenisKelompok,
   KELOMPOK_BAWAAN, semuaKelompok, muatKelompok, simpanKelompok, kelompokTerpakai,
 } from '@/lib/kelompok';
 import { supabase } from '@/lib/supabase';
@@ -41,12 +41,8 @@ const LABEL_JENIS: Record<JenisKelompok, string> = {
 };
 
 /**
- * Bagian "Kelompok & Notifikasi" pada Admin Panel.
- *
- * Satu tabel: baris = kelompok, kolom = lonceng. Bentuk ini dipilih karena
- * pertanyaan yang biasanya muncul bukan "apa hak kelompok X" melainkan "siapa
- * saja yang dapat lonceng Review" - dan itu terbaca sekali lihat kalau
- * disusun sebagai tabel, bukan sebagai daftar kartu.
+ * Bagian "Kelompok" pada Admin Panel — daftar kelompok PTS/Services/
+ * Marketing/Sales yang jadi sumber dropdown "Tipe PTS" di form akun.
  */
 export function KelompokSettingInline() {
   const [daftar, setDaftar] = useState<Kelompok[]>([]);
@@ -108,37 +104,22 @@ export function KelompokSettingInline() {
   };
 
   /**
-   * Centang "PTS Cabang" ikut menyesuaikan dua bawaan yang, kalau dibiarkan,
-   * membuat mitra luar diperlakukan seperti anggota tim internal.
-   *
-   * Kelompok baru lahir dengan ditugaskan:true dan SELURUH lonceng - masuk
-   * akal untuk tim internal, tapi salah untuk kelompok Cabang: anggotanya
-   * memang hanya dipilih di SATU titik (dropdown PTS Daerah saat jadwal
-   * Remote diselesaikan), bukan di dropdown assign Ticketing/Request
-   * Schedule/Design Project, dan tidak perlu menerima lonceng tiket internal.
-   * Ini persis yang terjadi pada kelompok PTS Daerah pertama yang dibuat.
+   * Centang "PTS Cabang" ikut mematikan "Bisa Ditugaskan" - kalau dibiarkan,
+   * mitra luar (kelompok Cabang) akan diperlakukan seperti anggota tim
+   * internal. Anggotanya memang hanya dipilih di SATU titik (dropdown PTS
+   * Daerah saat jadwal Remote diselesaikan), bukan di dropdown assign biasa.
    *
    * Hanya menyesuaikan saat DINYALAKAN, dan semuanya tetap bisa dikembalikan
    * admin - ini bawaan yang menolong, bukan aturan yang mengunci.
    */
   const tandaiCabang = (k: Kelompok) => {
     if (k.cabang) { ubah(k.nama, { cabang: false }); return; }
-    const perluDisesuaikan = k.ditugaskan || k.lonceng.length > 1;
-    ubah(k.nama, {
-      cabang: true,
-      ditugaskan: false,
-      lonceng: k.lonceng.filter(l => l === 'jadwal'),
-    });
+    const perluDisesuaikan = k.ditugaskan;
+    ubah(k.nama, { cabang: true, ditugaskan: false });
     if (perluDisesuaikan) {
-      beritahu('ok', `${k.label} ditandai PTS Cabang — "Bisa Ditugaskan" dimatikan dan loncengnya disisakan Jadwal saja. Ubah lagi kalau memang perlu.`);
+      beritahu('ok', `${k.label} ditandai PTS Cabang — "Bisa Ditugaskan" dimatikan. Ubah lagi kalau memang perlu.`);
     }
   };
-
-  const geserLonceng = (nama: string, l: Lonceng) =>
-    setDaftar(d => d.map(k => k.nama !== nama ? k : {
-      ...k,
-      lonceng: k.lonceng.includes(l) ? k.lonceng.filter(x => x !== l) : [...k.lonceng, l],
-    }));
 
   const tambah = () => {
     const inti = namaBaru.trim();
@@ -150,7 +131,7 @@ export function KelompokSettingInline() {
     }
     setDaftar(d => [...d, {
       nama, label: nama.replace(/^Team /i, ''), jenis: 'pts',
-      ditugaskan: true, cabang: false, dashboard: 'team', aktif: true, lonceng: [...SEMUA_LONCENG],
+      ditugaskan: true, cabang: false, dashboard: 'team', aktif: true,
     }]);
     setNamaBaru('');
   };
@@ -173,7 +154,7 @@ export function KelompokSettingInline() {
       k.nama && (terpakai[k.nama] ?? 0) > 0 && dashboardTerpakai[k.nama] !== k.dashboard);
     beritahu('ok', perluTerapkan.length > 0
       ? `Tersimpan. Tapi menu akun yang SUDAH ADA belum ikut berubah — tekan "Terapkan" pada baris ${perluTerapkan.map(k => k.label).join(', ')}.`
-      : 'Tersimpan. Lonceng ikut berubah tanpa perlu deploy.');
+      : 'Tersimpan.');
   };
 
   if (!siap) return <div className="p-6 text-sm text-slate-400">Memuat pengaturan…</div>;
@@ -191,9 +172,9 @@ export function KelompokSettingInline() {
 
       <div className="rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <h3 className="font-bold text-slate-800 text-sm">Kelompok & Hak Lonceng</h3>
+          <h3 className="font-bold text-slate-800 text-sm">Kelompok</h3>
           <p className="text-slate-500 text-xs mt-0.5">
-            Centang lonceng yang boleh dilihat tiap kelompok. Admin & Full Access selalu melihat semuanya.
+            Daftar kelompok kerja - sumber dropdown "Tipe PTS" saat membuat/mengedit akun.
           </p>
         </div>
 
@@ -206,11 +187,6 @@ export function KelompokSettingInline() {
                 <th className="text-center px-3 py-2.5" title="Ikut dropdown assign di Ticketing, Request Schedule, Request Design Project">Bisa&nbsp;Ditugaskan</th>
                 <th className="text-center px-3 py-2.5" title="Anggotanya muncul di dropdown PTS Cabang / Perwakilan saat jadwal Remote diselesaikan">PTS&nbsp;Cabang</th>
                 <th className="text-center px-3 py-2.5" title="Paket menu yang didapat anggota kelompok ini. Hanya soal menu - role, hak assign, dan pencatatan Incentive PTS tidak berubah.">Tampilan&nbsp;Dashboard</th>
-                {SEMUA_LONCENG.map(l => (
-                  <th key={l} className="text-center px-3 py-2.5 whitespace-nowrap">
-                    {LABEL_LONCENG[l].ikon} {LABEL_LONCENG[l].label}
-                  </th>
-                ))}
                 <th className="px-3 py-2.5" />
               </tr>
             </thead>
@@ -265,12 +241,6 @@ export function KelompokSettingInline() {
                         })()}
                       </div>
                     </td>
-                    {SEMUA_LONCENG.map(l => (
-                      <td key={l} className="px-3 py-2.5 text-center">
-                        <Centang aktif={k.lonceng.includes(l)} label={`${k.label} lonceng ${LABEL_LONCENG[l].label}`}
-                          onKlik={() => geserLonceng(k.nama, l)} />
-                      </td>
-                    ))}
                     <td className="px-3 py-2.5 text-right">
                       {!bawaan && (
                         <button type="button" onClick={() => hapus(k)}
@@ -328,9 +298,7 @@ export function KelompokSettingInline() {
       </div>
 
       <p className="text-[11px] text-slate-400 leading-relaxed">
-        Kelompok yang tidak bisa ditugaskan tetap punya loncengnya sendiri — Team PTS UMP misalnya, yang
-        pekerjaannya di Piket Showroom, hanya perlu lonceng Reminder. Siapa yang membawahi kelompok mana
-        diatur terpisah di User Management → Lingkup Manager.
+        Siapa yang membawahi kelompok mana diatur terpisah di User Management → Lingkup Manager.
       </p>
     </div>
   );
