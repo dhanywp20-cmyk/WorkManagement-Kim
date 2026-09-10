@@ -52,6 +52,17 @@ export interface DbTokenUser {
    * pernah benar-benar menghapus untuk siapa pun selain admin.
    */
   access_level?: string | null;
+  /**
+   * Peran Field Service tambahan (PROVIDER_ADMIN/PROVIDER_SUPERVISOR/
+   * FIELD_PIC/CLIENT_ADMIN/CLIENT_MANAGER/CLIENT_VIEWER), independen dari
+   * `role`/`access_level` - lihat docs/field-service-architecture.md §3.
+   * WAJIB ikut di sini: RLS fs_* (fs_is_provider()/fs_is_client_reviewer()
+   * di supabase/migrations/005_field_service_functions.sql) membaca klaim
+   * ini lewat jwt_claim('fs_role'). Tanpanya, setiap user selalu terlihat
+   * sebagai bukan siapa-siapa di sisi Field Service, apa pun yang disetel
+   * admin di kolom users.fs_role.
+   */
+  fs_role?: string | null;
 }
 
 /**
@@ -81,6 +92,7 @@ export function issueDbToken(user: DbTokenUser): string | null {
     full_name:      user.full_name ?? '',
     sales_division: user.sales_division ?? '',
     access_level:   user.access_level ?? '',
+    fs_role:        user.fs_role ?? '',
   };
 
   const signingInput = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(payload))}`;

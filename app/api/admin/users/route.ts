@@ -20,15 +20,10 @@ export const dynamic = 'force-dynamic';
 // Field yang BOLEH ditulis route ini (whitelist - cegah set kolom sembarangan).
 const ALLOWED_FIELDS = new Set([
   'username', 'full_name', 'role', 'team_type', 'sales_division',
-  'jabatan', 'phone_number', 'allowed_menus', 'allow_incentive_input', 'incentive_brand_scope', 'incentive_akses',
-  'atasan_id', 'kpi_enabled', 'is_internal_sales', 'access_level', 'piket_akses',
-  //  Toggle "boleh ditugaskan pekerjaan" - dibekukan trigger untuk anon, jadi
-  //  hanya bisa diubah lewat route ini. Lihat lib/teams.ts bolehDitugaskan().
-  'bisa_ditugaskan',
-  //  Alamat daerah/kota - hanya berarti untuk akun kelompok PTS Cabang (lihat
-  //  field `cabang` di lib/kelompok.ts). Dipakai auto-fill Daerah/Kota di
-  //  dropdown Installer, Reminder Schedule mode Remote.
-  'pts_daerah',
+  'jabatan', 'phone_number', 'allowed_menus', 'atasan_id',
+  'is_internal_sales', 'access_level',
+  // Field Service role - lihat docs/field-service-architecture.md §3.
+  'fs_role',
 ]);
 // 'password' sengaja TIDAK ada di daftar: kolom itu peninggalan dan tidak
 // pernah dibaca saat login. Password disimpan di user_credentials lewat

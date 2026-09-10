@@ -10,27 +10,14 @@ export interface User {
   jabatan?: string;
   atasan_id?: string | null;  // atasan langsung - pohon hierarki Struktur Organisasi
   allowed_menus?: string[];
-  kpi_enabled?: boolean;  // true = masuk roster KPI, false = dikecualikan
   created_at?: string;    // used to calculate days pending for Pending Approval users
   is_internal_sales?: boolean; // Guest/Sales internal (IVP/MVI) vs external - untuk routing pipeline
   /** 'full' | 'guest' - toggle akses setara admin di modul data. Lihat lib/constants.ts hasFullAccess(). */
   access_level?: string;
-  /** 'lingkup' | 'semua' - lingkup catatan tamu Piket Showroom. Lihat lib/piket-akses.ts. */
-  piket_akses?: string | null;
   /** Chat ID Telegram pribadi, terisi hanya lewat verifikasi - lihat app/api/notifikasi/telegram/route.ts aksi 'hubungkan'. */
   telegram_chat_id?: string | null;
-  /**
-   * Namanya ditawarkan saat assign pekerjaan? Bawaan true; dimatikan admin
-   * untuk akun yang perannya menyetujui, bukan mengerjakan.
-   * Lihat bolehDitugaskan() di lib/teams.ts.
-   */
-  bisa_ditugaskan?: boolean | null;
-  /**
-   * Alamat daerah/kota - hanya berarti untuk akun kelompok PTS Cabang (lihat
-   * field `cabang` di lib/kelompok.ts). Dipakai auto-fill Daerah/Kota saat
-   * akun ini dipilih di dropdown Installer, Reminder Schedule mode Remote.
-   */
-  pts_daerah?: string | null;
+  /** Field Service role tambahan - lihat docs/field-service-architecture.md §3. */
+  fs_role?: string | null;
 }
 
 export interface MenuItem {
@@ -93,21 +80,11 @@ export { JABATAN_LIST, JABATAN_CONFIG, JABATAN_CC_RULES, type JabatanType } from
 
 // Account Settings Modal
 
+// Menu modul lama dihapus saat repo ini dikonversi jadi Field Service & Proof
+// of Execution platform. Tambahkan kunci menu Field Service di sini begitu
+// halamannya dibangun (lihat juga allMenuItems di app/dashboard/page.tsx).
 export const ALL_MENU_KEYS = [
   'dashboard',
-  'kpi-team',
-  'form-bast',
-  'request-design-project',
-  'ticket-troubleshooting',
-  'incentive-pts',
-  'project-progress',
-  'daily-report',
-  'database-pts',
-  'unit-movement',
-  'reminder-schedule',
-  'picket-showroom',
-  'learning-center',
-  'tech-note',
 ];
 
 /**
@@ -115,7 +92,7 @@ export const ALL_MENU_KEYS = [
  * Admin/superadmin tetap melihatnya (mereka bypass allowed_menus), tapi anggota
  * team baru harus diberi akses manual lewat Admin Panel.
  */
-export const RESTRICTED_MENU_KEYS = ['project-progress'];
+export const RESTRICTED_MENU_KEYS: string[] = [];
 
 /**
  * Default allowed_menus untuk user BARU. Sengaja dipisah dari ALL_MENU_KEYS:
@@ -144,30 +121,10 @@ export const DEFAULT_MENU_KEYS = ALL_MENU_KEYS.filter(k => !RESTRICTED_MENU_KEYS
  * ditugaskan jadwal dan tetap tercatat bagiannya di Incentive PTS - yang
  * berubah hanya apa yang ia lihat di layarnya sendiri.
  */
-export const SALES_MENU_KEYS = ALL_MENU_KEYS.filter(k => [
-  'dashboard',
-  'form-bast',
-  'request-design-project',
-  'ticket-troubleshooting',
-  'reminder-schedule',
-  'learning-center',
-].includes(k));
+export const SALES_MENU_KEYS = ALL_MENU_KEYS.filter(k => ['dashboard'].includes(k));
 
 export const ALL_MENU_LABELS: Record<string, { label: string; icon: string }> = {
-  'dashboard':              { label: 'Analytics Dashboard (KPI)', icon: '📊' },
-  'kpi-team':               { label: 'KPI Team', icon: '📊' },
-  'learning-center':        { label: 'Learning Center', icon: '🎓' },
-  'form-bast':              { label: 'Form Review Demo & BAST', icon: '⭐' },
-  'request-design-project': { label: 'Request Design Project', icon: '🏗️' },
-  'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫' },
-  'incentive-pts':          { label: 'Incentive Team PTS IVP', icon: '💰' },
-  'project-progress':       { label: 'Project Progress', icon: '📊' },
-  'daily-report':           { label: 'Daily Report', icon: '📈' },
-  'database-pts':           { label: 'Database PTS', icon: '💼' },
-  'unit-movement':          { label: 'Unit Movement Log', icon: '🚚' },
-  'reminder-schedule':      { label: 'Request Schedule', icon: '🗓️' },
-  'picket-showroom':        { label: 'Piket Showroom', icon: '🏪' },
-  'tech-note':              { label: 'Tech Note R&D', icon: '📝' },
+  'dashboard': { label: 'Dashboard', icon: '📊' },
 };
 
 export const ROLE_BADGE: Record<string, string> = {
@@ -211,6 +168,6 @@ export interface NotifBellProps {
 
 // Admin Panel props
 export interface AdminPanelModalProps {
-  initialTab: 'settings' | 'userManagement' | 'picBrand' | 'kpiRoster' | 'merek' | 'kelompok';
+  initialTab: 'settings' | 'userManagement' | 'picBrand' | 'merek' | 'kelompok';
   onClose: () => void;
 }

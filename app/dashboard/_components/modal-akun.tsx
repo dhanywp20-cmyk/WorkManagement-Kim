@@ -76,21 +76,10 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  // Menu modul lama dihapus bersama modulnya saat repo ini dikonversi jadi
+  // Field Service & Proof of Execution platform.
   const menuLabels: Record<string, { label: string; icon: string; gradient: string }> = {
-    'dashboard': { label: 'Analytics Dashboard (KPI)', icon: '📊', gradient: 'from-blue-600 to-indigo-500' },
-    'learning-center': { label: 'Learning Center', icon: '🎓', gradient: 'from-teal-600 to-teal-500' },
-    'form-bast': { label: 'Form Review Demo & BAST', icon: '⭐', gradient: 'from-slate-600 to-slate-500' },
-    'request-design-project': { label: 'Request Design Project', icon: '🏗️', gradient: 'from-violet-600 to-violet-500' },
-    'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫', gradient: 'from-rose-600 to-rose-500' },
-    'incentive-pts': { label: 'Incentive Team PTS IVP', icon: '💰', gradient: 'from-rose-600 to-rose-500' },
-    'project-progress': { label: 'Project Progress', icon: '📊', gradient: 'from-cyan-600 to-teal-500' },
-    'daily-report': { label: 'Daily Report', icon: '📈', gradient: 'from-emerald-600 to-emerald-500' },
-    'database-pts': { label: 'Database PTS', icon: '💼', gradient: 'from-indigo-600 to-indigo-500' },
-    'unit-movement': { label: 'Unit Movement Log', icon: '🚚', gradient: 'from-amber-600 to-amber-500' },
-    'reminder-schedule': { label: 'Request Schedule', icon: '🗓️', gradient: 'from-cyan-600 to-cyan-500' },
-    'picket-showroom': { label: 'Piket Showroom', icon: '🏪', gradient: 'from-teal-600 to-teal-500' },
-    'tech-note': { label: 'Tech Note R&D', icon: '📝', gradient: 'from-pink-600 to-rose-500' },
-    'kpi-team': { label: 'KPI Team', icon: '📊', gradient: 'from-sky-600 to-sky-500' },
+    'dashboard': { label: 'Dashboard', icon: '📊', gradient: 'from-blue-600 to-indigo-500' },
   };
 
   const notify = (type: 'success' | 'error', msg: string) => {
@@ -479,7 +468,7 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
                               else if (user.team_type === 'Marketing') { d = 'Marketing'; }
                               setEditDivisi(d);
                               setEditPtsType(p);
-                              setEditPtsDaerah(user.pts_daerah ?? '');
+                              setEditPtsDaerah('');
                               setEditOrig({ username: user.username, full_name: user.full_name });
                               setEditingUser(user);
                             }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all">Edit</button>
@@ -614,24 +603,9 @@ export function AccountSettingsInline() {
    * berlaku saat "Simpan Perubahan" ditekan, sama seperti field lainnya.
    */
   const [editAccessLevel, setEditAccessLevel] = useState<'full' | 'guest'>('guest');
-  /** Muncul di dropdown penerima tugas? Lihat bolehDitugaskan di lib/teams.ts. */
-  const [editBisaDitugaskan, setEditBisaDitugaskan] = useState(true);
 
   const menuLabels: Record<string, { label: string; icon: string }> = {
-    'dashboard': { label: 'Analytics Dashboard (KPI)', icon: '📊' },
-    'form-bast': { label: 'Form Review Demo & BAST', icon: '⭐' },
-    'request-design-project': { label: 'Request Design Project', icon: '🏗️' },
-    'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫' },
-    'incentive-pts': { label: 'Incentive Team PTS IVP', icon: '💰' },
-    'project-progress': { label: 'Project Progress', icon: '📊' },
-    'daily-report': { label: 'Daily Report', icon: '📈' },
-    'database-pts': { label: 'Database PTS', icon: '💼' },
-    'unit-movement': { label: 'Unit Movement Log', icon: '🚚' },
-    'reminder-schedule': { label: 'Request Schedule', icon: '🗓️' },
-    'picket-showroom': { label: 'Piket Showroom', icon: '🏪' },
-    'learning-center': { label: 'Learning Center', icon: '🎓' },
-    'tech-note': { label: 'Tech Note R&D', icon: '📝' },
-    'kpi-team': { label: 'KPI Team', icon: '📊' },
+    'dashboard': { label: 'Dashboard', icon: '📊' },
   };
 
   const notify = (type: 'success' | 'error', msg: string) => { setNotification({ type, msg }); setTimeout(() => setNotification(null), 3000); };
@@ -639,10 +613,10 @@ export function AccountSettingsInline() {
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
-    const { data, error } = await supabase.from('users').select('id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus,kpi_enabled,divisi,pts_type,pts_daerah,created_at,access_level,piket_akses,bisa_ditugaskan').order('full_name');
+    const { data, error } = await supabase.from('users').select('id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus,created_at,access_level,is_internal_sales,fs_role').order('full_name');
     if (error) {
-      // Fallback: try without extended columns (divisi/pts_type may not exist yet)
-      const { data: fallback, error: err2 } = await supabase.from('users').select('id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus,kpi_enabled,created_at').order('full_name');
+      // Fallback: minimal column set, in case this runs against an older schema.
+      const { data: fallback, error: err2 } = await supabase.from('users').select('id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus,created_at').order('full_name');
       if (!err2 && fallback) {
         setPendingUsers(fallback.filter((u: User) => u.team_type === 'Pending Approval'));
         setUsers(fallback.filter((u: User) => u.team_type !== 'Pending Approval'));
@@ -746,15 +720,7 @@ export function AccountSettingsInline() {
     const updatePayload: Record<string, unknown> = { username: editingUser.username, full_name: editingUser.full_name, role, team_type, allowed_menus: editingUser.allowed_menus ?? ALL_MENU_KEYS, jabatan: editingUser.jabatan ?? null, phone_number: editingUser.phone_number ?? null, sales_division: (editDivisi === 'Sales' || editDivisi === 'Marketing') ? (editingUser.sales_division ?? null) : null,
       // Ikut update is_internal_sales HANYA kalau admin ganti divisi (editDivisi terisi).
       ...(editDivisi ? { is_internal_sales: editDivisi === 'Marketing' || (editDivisi === 'Sales' && ['IVP', 'MVI', 'MLDS'].includes(editingUser.sales_division ?? '')) } : {}),
-      ...(editDivisi === 'PTS' ? { pts_daerah: isCabangEdit2 ? editPtsDaerah.trim() : null } : {}),
-      //  Lingkup catatan tamu Piket Showroom. Ikut updatePayload biasa (bukan
-      //  jalur tersendiri seperti access_level) karena route admin sudah
-      //  memasukkannya ke whitelist dan menulisnya dengan service-role, jadi
-      //  trigger pembekuan kolom tidak menghalangi.
-      piket_akses: role === 'team' ? null : (editingUser.piket_akses ?? null),
-      //  Ikut updatePayload biasa: route admin menulisnya dengan service-role,
-      //  jadi pembekuan kolom di trigger tidak menghalangi.
-      bisa_ditugaskan: editBisaDitugaskan };
+      ...(editDivisi === 'PTS' ? { pts_daerah: isCabangEdit2 ? editPtsDaerah.trim() : null } : {}) };
     const { error } = await adminUpdateUser(editingUser.id, updatePayload);
     if (error) { setSaving(false); notify('error', 'Gagal menyimpan: ' + error.message); return; }
 
@@ -960,73 +926,6 @@ export function AccountSettingsInline() {
                       </p>
                     </div>
                   )}
-                  {/* BISA DITUGASKAN — memisahkan "punya wewenang" dari "ikut
-                      mengerjakan". Sebelumnya Ticketing mengecualikan Manager
-                      lewat jabatan yang dipaku di kode, sementara Reminder
-                      Schedule & Design Project tidak mengecualikan siapa pun -
-                      sehingga Supervisor bisa (dan pernah) meng-assign
-                      pekerjaan ke Manager karena namanya memang ditawarkan. */}
-                  {editingUser.role === 'team' && (
-                    <div className="formulir:col-span-3">
-                      <label className="block text-xs font-bold mb-1 text-slate-600 uppercase tracking-widest">🎯 Penerima Tugas</label>
-                      <div className="flex gap-2">
-                        {([
-                          { v: true,  icon: '🛠️', label: 'Bisa ditugaskan',   desc: 'Muncul di dropdown assign' },
-                          { v: false, icon: '🚫', label: 'Tidak ditugaskan',  desc: 'Menyetujui, bukan mengerjakan' },
-                        ]).map(o => (
-                          <button key={String(o.v)} type="button" onClick={() => setEditBisaDitugaskan(o.v)}
-                            className={`flex-1 text-left px-3 py-2 rounded-lg border-2 transition-all ${
-                              editBisaDitugaskan === o.v
-                                ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
-                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                            }`}>
-                            <span className="block text-sm font-bold">{o.icon} {o.label}</span>
-                            <span className="block text-[11px] mt-0.5 opacity-80">{o.desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1.5">
-                        Menentukan apakah namanya ditawarkan saat assign pekerjaan di <strong>Ticketing,
-                        Reminder Schedule, dan Request Design</strong>. Matikan untuk akun yang perannya
-                        menyetujui &amp; mengarahkan — ia tetap bisa approve, re-route, dan melihat semuanya.
-                      </p>
-                    </div>
-                  )}
-                  {/* PIKET SHOWROOM — hanya untuk akun non-PTS. Tim PTS yang
-                      bertugas piket selalu melihat seluruh catatan, jadi
-                      kontrolnya tidak berarti apa-apa untuk mereka.
-
-                      Ada karena resepsionis / front desk tidak muat di aturan
-                      lingkup Sales: namanya tidak pernah muncul sebagai
-                      nama_sales, sehingga batas itu menyisakan NOL baris dan
-                      seluruh ringkasan Piket Showroom tampil kosong. */}
-                  {editingUser.role !== 'team' && (
-                    <div className="formulir:col-span-3">
-                      <label className="block text-xs font-bold mb-1 text-slate-600 uppercase tracking-widest">🏪 Piket Showroom — Catatan Tamu</label>
-                      <div className="flex gap-2">
-                        {([
-                          { v: 'lingkup' as const, icon: '🔒', label: 'Sesuai divisi', desc: 'Hanya catatan atas namanya / divisinya' },
-                          { v: 'semua'   as const, icon: '🏪', label: 'Semua catatan', desc: 'Resepsionis / front desk — tetap tidak bisa menyunting' },
-                        ]).map(o => {
-                          const aktif = (editingUser.piket_akses ?? 'lingkup') === o.v;
-                          return (
-                            <button key={o.v} type="button"
-                              onClick={() => setEditingUser({ ...editingUser, piket_akses: o.v === 'lingkup' ? null : o.v })}
-                              className={`flex-1 text-left px-3 py-2 rounded-lg border-2 transition-all ${
-                                aktif ? 'bg-teal-50 border-teal-400 text-teal-800' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                              }`}>
-                              <span className="block text-sm font-bold">{o.icon} {o.label}</span>
-                              <span className="block text-[11px] mt-0.5 opacity-80">{o.desc}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1.5">
-                        Mengatur apa yang <strong>dilihat</strong> saja. Mengisi &amp; menyunting kegiatan piket tetap
-                        hanya Tim PTS — akun non-PTS tidak mendapat tombol Edit.
-                      </p>
-                    </div>
-                  )}
                   <div className="formulir:col-span-3">
                     <MenuPermissionSelector selected={editingUser.allowed_menus ?? ALL_MENU_KEYS} target="edit" />
                   </div>
@@ -1077,7 +976,7 @@ export function AccountSettingsInline() {
                                 if (user.role === 'team') { d = 'PTS'; p = labelKelompokPTS(user.team_type ?? ''); }
                                 else if (user.team_type === 'Guest') { d = 'Sales'; }
                                 else if (user.team_type === 'Marketing') { d = 'Marketing'; }
-                                setEditDivisi(d); setEditPtsType(p); setEditPtsDaerah(user.pts_daerah ?? ''); setEditOrig({ username: user.username, full_name: user.full_name }); setEditAccessLevel(user.access_level === 'full' ? 'full' : 'guest'); setEditBisaDitugaskan(user.bisa_ditugaskan !== false); setEditingUser(user);
+                                setEditDivisi(d); setEditPtsType(p); setEditPtsDaerah(''); setEditOrig({ username: user.username, full_name: user.full_name }); setEditAccessLevel(user.access_level === 'full' ? 'full' : 'guest'); setEditingUser(user);
                               }} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all">Edit</button>
                               <button onClick={() => handleDeleteUser(user.id, user.full_name)} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all">Hapus</button>
                             </div>

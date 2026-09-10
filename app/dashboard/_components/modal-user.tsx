@@ -1,11 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { KUNCI_PENGATURAN } from '@/lib/kunci-pengaturan';
 import { supabase } from '@/lib/supabase';
 
 import { adminUpdateUser } from '@/lib/admin-users';
 
-import { PRODUCT_TYPES } from '@/app/reminder-schedule/_components/shared';
 import { User, SALES_DIVISIONS, JabatanType, JABATAN_CONFIG, JABATAN_CC_RULES } from './shared';
 import { useDivisiSales } from '@/lib/merek';
 import { DivisiSalesInline } from './divisi-sales';
@@ -645,11 +643,6 @@ export function UserManagementInline() {
   const [divSupMaps, setDivSupMaps] = useState<{ id: string; sales_division: string; supervisor_id: string }[]>([]);
   const [divIvpMaps, setDivIvpMaps] = useState<{ id: string; sales_division: string; ivp_id: string; brand_type?: string | null }[]>([]);
   const [userSupMaps, setUserSupMaps] = useState<{ id: string; user_id: string; supervisor_id: string }[]>([]);
-  const [prodTeamMaps, setProdTeamMaps] = useState<{ id: string; product_type: string; team_types: string[] }[]>([]);
-  const [prodType, setProdType] = useState('');
-  const [prodTeamTypes, setProdTeamTypes] = useState<string[]>([]);
-  const [managerUserId, setManagerUserId] = useState('');
-  const [savingMgr, setSavingMgr] = useState(false);
   const [internalSearch, setInternalSearch] = useState('');
   const [savingInternal, setSavingInternal] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -675,7 +668,7 @@ export function UserManagementInline() {
 
   const fetchAll = async () => {
     setLoadingData(true);
-    const [usersRes, divSupRes, divIvpRes, userSupRes, atasanRes, prodRes, mgrRes, internalRes] = await Promise.all([
+    const [usersRes, divSupRes, divIvpRes, userSupRes, atasanRes, internalRes] = await Promise.all([
       supabase.from('users').select('id, username, full_name, role, team_type, sales_division, phone_number, jabatan').order('full_name'),
       supabase.from('division_supervisor_mappings').select('id,sales_division,supervisor_id').order('sales_division'),
       supabase.from('division_ivp_mappings').select('id,sales_division,ivp_id,brand_type').order('sales_division'),
@@ -683,9 +676,6 @@ export function UserManagementInline() {
       // Query terpisah & tahan-error: jika kolom atasan_id belum ada (migration belum jalan),
       // ini hanya error sendiri tanpa mematahkan load user utama.
       supabase.from('users').select('id, atasan_id'),
-      // Routing pipeline (Fase 1) - tahan-error bila tabel/setting belum ada.
-      supabase.from('product_team_map').select('id,product_type,team_types').order('product_type'),
-      supabase.from('app_settings').select('value').eq('key', KUNCI_PENGATURAN.MANAGER).maybeSingle(),
       // Flag Internal/External Sales - tahan-error bila kolom belum ada.
       supabase.from('users').select('id, is_internal_sales'),
     ]);
@@ -697,8 +687,6 @@ export function UserManagementInline() {
     if (divSupRes.data) setDivSupMaps(divSupRes.data);
     if (divIvpRes.data) setDivIvpMaps(divIvpRes.data);
     if (userSupRes.data) setUserSupMaps(userSupRes.data);
-    if (prodRes.data) setProdTeamMaps(prodRes.data as { id: string; product_type: string; team_types: string[] }[]);
-    if (mgrRes.data?.value) setManagerUserId(String(mgrRes.data.value).replace(/^"|"$/g, ''));
     setLoadingData(false);
   };
 
@@ -812,38 +800,6 @@ export function UserManagementInline() {
     PTS:       { bg: '#E1F5EE', color: '#085041' },
     Lainnya:   { bg: '#F1EFE8', color: '#444441' },
   };
-  // Routing pipeline: tipe produk  TIM (bukan orang) + akun Manager
-  const toggleProdTeamType = (tt: string) => {
-    setProdTeamTypes(prev => prev.includes(tt) ? prev.filter(x => x !== tt) : [...prev, tt]);
-  };
-  const handleAddProdSup = async () => {
-    if (!prodType || prodTeamTypes.length === 0) { notify('error', 'Pilih tipe produk & minimal 1 tim.'); return; }
-    setSaving(true);
-    const { error } = await supabase.from('product_team_map').upsert({ product_type: prodType, team_types: prodTeamTypes }, { onConflict: 'product_type' });
-    if (error) notify('error', 'Gagal: ' + error.message);
-    else { notify('success', 'Routing tipe produk disimpan!'); setProdType(''); setProdTeamTypes([]); await fetchAll(); }
-    setSaving(false);
-  };
-  const handleDeleteProdSup = (id: string) => {
-    setConfirmState({ message: 'Hapus routing tipe produk ini?', danger: true, confirmLabel: 'Hapus', onConfirm: async () => {
-      //  select('id') supaya penolakan diam-diam RLS ikut terlihat.
-      const { data, error } = await supabase.from('product_team_map').delete().eq('id', id).select('id');
-      if (error || !data || data.length === 0) { notify('error', 'Gagal menghapus routing.'); return; }
-      notify('success', 'Dihapus.'); await fetchAll();
-    }});
-  };
-  const handleSaveManager = async () => {
-    if (!managerUserId) { notify('error', 'Pilih akun Manager.'); return; }
-    setSavingMgr(true);
-    const { error } = await supabase.from('app_settings').upsert({ key: KUNCI_PENGATURAN.MANAGER, value: managerUserId }, { onConflict: 'key' });
-    if (error) notify('error', 'Gagal: ' + error.message);
-    else notify('success', 'Akun Manager disimpan!');
-    setSavingMgr(false);
-  };
-  // Supervisor tim dicari LIVE dari Struktur Organisasi (team_type + jabatan=Supervisor) -
-  // tidak disimpan, jadi otomatis benar walau supervisornya berganti orang.
-  const getSupervisorsForTeam = (teamType: string): string =>
-    allUsers.filter(u => u.team_type === teamType && u.jabatan === 'Supervisor').map(u => u.full_name).join(', ') || '— (belum ada Supervisor di tim ini)';
   const handleToggleInternalSales = async (userId: string, current: boolean) => {
     setSavingInternal(userId);
     const { error } = await adminUpdateUser(userId, { is_internal_sales: !current });
@@ -957,7 +913,7 @@ export function UserManagementInline() {
           🔗 IVP & MVI Account ({Object.keys(ivpByUser).length} orang)
         </button>
         <button onClick={() => setActiveTab('product')} className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${activeTab === 'product' ? 'border-rose-500 text-rose-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-          🎯 Routing Tipe ({prodTeamMaps.length})
+          🏷️ Sales Internal/External
         </button>
         <button onClick={() => setActiveTab('user_cc')} className={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${activeTab === 'user_cc' ? 'border-teal-500 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
           🏷️ CC per User ({userSupMaps.length})
@@ -1257,68 +1213,6 @@ export function UserManagementInline() {
 
             {activeTab === 'product' && (
               <div className="p-5 space-y-5">
-                {/* Routing tipe produk → TIM (bukan orang) */}
-                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50">
-                  <p className="text-xs font-bold text-rose-700 mb-1">🎯 Routing Tipe Produk → Tim</p>
-                  <p className="text-[11px] text-slate-500 mb-3">Request diarahkan otomatis ke Supervisor tim sesuai tipe produk (Supervisor dicari live dari Struktur Organisasi — bukan hardcode nama). "LED &amp; LCD" boleh diarahkan ke 2 tim sekaligus (keduanya di-notify, 1 tim yang eksekusi).</p>
-                  <div className="grid grid-cols-1 formulir:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-widest">Tipe Produk</label>
-                      <select aria-label="-- Pilih Tipe --" value={prodType} onChange={e => setProdType(e.target.value)} className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-200 bg-white">
-                        <option value="">-- Pilih Tipe --</option>
-                        {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div className="formulir:col-span-2">
-                      <label className="block text-[10px] font-bold mb-1 text-slate-500 uppercase tracking-widest">Tim PTS (bisa pilih lebih dari 1)</label>
-                      <div className="flex flex-wrap gap-2">
-                        {['Team PTS IVP', 'Team PTS UMP', 'Team PTS MVI'].map(tt => (
-                          <button key={tt} type="button" onClick={() => toggleProdTeamType(tt)}
-                            className="px-3 py-2 rounded-lg text-xs font-bold border-2 transition-all"
-                            style={prodTeamTypes.includes(tt)
-                              ? { borderColor: '#e11d48', background: 'rgba(225,29,72,0.1)', color: '#e11d48' }
-                              : { borderColor: 'rgba(0,0,0,0.1)', background: 'white', color: '#64748b' }}>
-                            {tt.replace('Team PTS ', '')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button onClick={handleAddProdSup} disabled={saving} className="mt-3 px-5 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 disabled:opacity-50 transition-all">{saving ? '...' : '💾 Simpan Routing'}</button>
-                  <div className="mt-4 space-y-2">
-                    {prodTeamMaps.length === 0 ? <p className="text-[11px] text-slate-400">Belum ada routing tipe produk.</p> : prodTeamMaps.map(m => (
-                      <div key={m.id} className="bg-white border border-rose-200 rounded-lg px-3 py-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs flex-wrap">
-                            <span className="font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">{m.product_type}</span>
-                            <span className="text-slate-400">→</span>
-                            {m.team_types.map(tt => <span key={tt} className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{tt.replace('Team PTS ', '')}</span>)}
-                          </div>
-                          <button aria-label="Hapus" onClick={() => handleDeleteProdSup(m.id)} className="text-rose-300 hover:text-red-500 transition-colors" title="Hapus">
-                            <svg aria-hidden="true" focusable="false" className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </div>
-                        <div className="mt-1 text-[10px] text-slate-400">
-                          Supervisor saat ini: {m.team_types.map(tt => getSupervisorsForTeam(tt)).join(' · ')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Akun Manager (gerbang approval) */}
-                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50">
-                  <p className="text-xs font-bold text-amber-700 mb-1">👑 Akun Manager (gerbang approval)</p>
-                  <p className="text-[11px] text-slate-500 mb-3">Manager yang wajib approve sebelum request turun ke supervisor. Untuk sekarang boleh sama dengan Admin (Dhany); bisa dialihkan ke akun lain kapan saja.</p>
-                  <div className="flex gap-3">
-                    <select aria-label="-- Pilih Akun Manager --" value={managerUserId} onChange={e => setManagerUserId(e.target.value)} className="flex-1 min-w-0 border border-amber-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-200 bg-white">
-                      <option value="">-- Pilih Akun Manager --</option>
-                      {allUsers.filter(u => u.jabatan === 'Manager' || ['admin', 'superadmin'].includes((u.role || '').toLowerCase())).map(u => <option key={u.id} value={u.id}>{u.full_name}{u.jabatan ? ` (${u.jabatan})` : ''}</option>)}
-                    </select>
-                    <button onClick={handleSaveManager} disabled={savingMgr} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 disabled:opacity-50 transition-all">{savingMgr ? '...' : '💾 Simpan'}</button>
-                  </div>
-                </div>
-
                 {/* Internal / External Sales */}
                 <div className="p-4 rounded-xl border border-sky-200 bg-sky-50">
                   <p className="text-xs font-bold text-sky-700 mb-1">🏷️ Sales Internal / External</p>
