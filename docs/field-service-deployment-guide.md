@@ -26,9 +26,9 @@ Pushing code to GitHub does **not** touch the database, and creating/updating th
    - Set a database password and save it somewhere — not otherwise needed for this app, but
      Supabase requires it.
 2. Wait for the project to finish provisioning (a minute or two).
-3. Open **SQL Editor → New query**. Run these three files from `supabase/migrations/` in this
-   repo, **one at a time, in this exact order** (002 depends on tables created in 001; 003
-   depends on functions created in 002):
+3. Open **SQL Editor → New query**. Run these files from `supabase/migrations/` in this repo,
+   **one at a time, in this exact numeric order** (each one depends on tables/functions created
+   by the ones before it):
    1. `supabase/migrations/001_core_schema.sql` — tables: `users`, `user_credentials`,
       `user_sessions`, `login_attempts`, `password_reset_otps`, `audit_trail`,
       `notifications`, `app_settings`, `rahasia_integrasi`.
@@ -37,12 +37,27 @@ Pushing code to GitHub does **not** touch the database, and creating/updating th
       privileged `users` columns against direct client edits.
    3. `supabase/migrations/003_core_rls.sql` — enables Row Level Security and creates the
       policies for the tables above.
-   - Paste the whole file content into one query and click **Run** each time. All three should
+   4. `supabase/migrations/004_field_service_schema.sql` — the 12 Field Service (`fs_*`) tables:
+      `fs_projects`, `fs_areas`, `fs_locations`, `fs_execution_points`, `fs_pic_assignments`,
+      `fs_recurring_schedules`, `fs_execution_instances`, `fs_work_sessions`, `fs_gps_events`,
+      `fs_evidence`, `fs_reviews`, `fs_project_settings`.
+   5. `supabase/migrations/005_field_service_functions.sql` — Field Service enforcement
+      functions, including the `SECURITY DEFINER` functions `fs_check_in`/`fs_check_out`/
+      `fs_status_transition` that PIC check-in/check-out and status changes go through.
+   6. `supabase/migrations/006_field_service_rls.sql` — enables Row Level Security and creates
+      the policies for all `fs_*` tables above (must run after 005, since these policies call
+      its functions).
+   - Paste the whole file content into one query and click **Run** each time. All six should
      complete with no errors.
 4. Optional but recommended: **Advisors → Security** in the Supabase dashboard should show only
    informational "RLS enabled, no policy" notices for `user_credentials`, `user_sessions`,
    `login_attempts`, `password_reset_otps`, `rahasia_integrasi` — that's intentional (see the
-   comment at the bottom of `003_core_rls.sql`), not a problem to fix.
+   comment at the bottom of `003_core_rls.sql`), not a problem to fix. Under **Advisors →
+   Performance** you may also see a warning that `fs_check_in`, `fs_check_out`,
+   `fs_status_transition`, `fs_is_assigned`, `fs_effective_gps_radius`, and
+   `fs_effective_evidence_min_count` are `SECURITY DEFINER` functions callable by `anon`/
+   `authenticated` — that's also intentional and explained in the header comment of
+   `006_field_service_rls.sql`.
 5. Create your first admin account (the `users` table starts empty, and the app can't create an
    admin from the UI since registration always creates a `guest`/pending account). In **SQL
    Editor**, run (replace the bracketed values):
