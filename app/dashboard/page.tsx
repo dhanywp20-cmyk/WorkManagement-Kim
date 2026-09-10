@@ -175,86 +175,10 @@ export default function Dashboard() {
 
   const [visibleMenuItems, setVisibleMenuItems] = useState<MenuItem[]>([]);
 
-  const allMenuItems: MenuItem[] = [
-	{
-      title: 'Learning Center', icon: '🎓', key: 'learning-center',
-      gradient: 'from-blue-700 via-blue-600 to-indigo-500',
-      description: 'Platform training, quiz online & analytics team',
-      items: [{ name: 'Learning Center', url: '/learning-center', icon: '📚', internal: true, embed: true }]
-    },
-    {
-      title: 'Tech Note R&D', icon: '📝', key: 'tech-note',
-      gradient: 'from-pink-700 via-pink-600 to-rose-500',
-      description: 'Platform dokumentasi teknikal & R&D — KPI 10%',
-      items: [{ name: 'Tech Note', url: '/tech-note', icon: '📝', internal: true, embed: true }]
-    },
-    {
-      title: 'Request Schedule', icon: '🗓️', key: 'reminder-schedule',
-      gradient: 'from-cyan-700 via-cyan-600 to-teal-500',
-      description: 'Jadwal & request pekerjaan team PTS',
-      items: [{ name: 'Request Schedule', url: '/reminder-schedule', icon: '⏰', internal: true, embed: true }]
-    },
-    {
-      title: 'Request Design Project', icon: '🏗️', key: 'request-design-project',
-      gradient: 'from-violet-700 via-violet-600 to-violet-500',
-      description: 'Solution request Design form untuk project Sales',
-      items: [{ name: 'Submit Require', url: '/form-require-project', icon: '📋', internal: true, embed: true }]
-    },
-    {
-      title: 'Form Review Demo & BAST', icon: '⭐', key: 'form-bast',
-      gradient: 'from-slate-700 via-slate-600 to-slate-500',
-      description: 'Platform review Demo Produk & BAST',
-      items: [{ name: 'Platform Review', url: '/form-review', icon: '⭐', internal: true, embed: true }]
-    },
-    {
-      title: 'Ticket Troubleshooting', icon: '🎫', key: 'ticket-troubleshooting',
-      gradient: 'from-rose-700 via-rose-600 to-rose-500',
-      description: 'Technical support & issue tracking',
-      items: [{ name: 'Ticket Management', url: '/ticketing', icon: '🔧', internal: true, embed: true }]
-    },
-    {
-      title: 'Piket Showroom', icon: '🏪', key: 'picket-showroom',
-      gradient: 'from-teal-700 via-teal-600 to-cyan-500',
-      description: 'Jadwal piket showroom Team PTS IVP, UMP & MVI',
-      items: [{ name: 'Piket Showroom', url: '/picket-showroom', icon: '📅', internal: true, embed: true }]
-    },
-    {
-      title: 'Daily Report', icon: '📈', key: 'daily-report',
-      gradient: 'from-emerald-700 via-emerald-600 to-emerald-500',
-      description: 'Activity tracking & performance metrics',
-	  items: [{ name: 'Daily Report', url: '/daily-report', icon: '📅', internal: true, embed: true }]
-    },
-    {
-      title: 'Database PTS', icon: '💼', key: 'database-pts',
-      gradient: 'from-indigo-700 via-indigo-600 to-indigo-500',
-      description: 'Central repository & documentation',
-      items: [{ name: 'Access Database', url: 'https://1drv.ms/f/c/25d404c0b5ee2b43/IgBDK-61wATUIIAlAgQAAAAAAZWW6TamAlBHUnCoirmplNs', icon: '🗃️', embed: false, external: true }]
-    },
-    {
-      title: 'Unit Movement Log', icon: '🚚', key: 'unit-movement',
-      gradient: 'from-amber-700 via-amber-600 to-amber-500',
-      description: 'Equipment check-in & check-out tracking',
-      items: [{ name: 'Unit Movement Log', url: '/unit-movement', icon: '🚚', internal: true, embed: true }]
-    },
-    {
-      title: 'Incentive PTS', icon: '💰', key: 'incentive-pts',
-      gradient: 'from-indigo-700 via-indigo-600 to-purple-500',
-      description: 'Kalkulasi & rekap incentive tim PTS',
-      items: [{ name: 'Incentive PTS', url: '/incentive-pts', icon: '💰', internal: true, embed: true }]
-    },
-    {
-      title: 'Project Progress', icon: '📊', key: 'project-progress',
-      gradient: 'from-cyan-700 via-cyan-600 to-teal-500',
-      description: 'Progres instalasi per proyek & per lokasi',
-      items: [{ name: 'Project Progress', url: '/project-progress', icon: '📊', internal: true, embed: true }]
-    },
-    {
-      title: 'KPI Team', icon: '📊', key: 'kpi-team',
-      gradient: 'from-sky-700 via-sky-600 to-blue-500',
-      description: 'Key Performance Indicators & analytics tim PTS',
-      items: [{ name: 'KPI Team', url: '/kpi-team', icon: '📊', internal: true, embed: true }]
-    },
-  ];
+  // Menu modul lama (Learning Center/Tech Note/Reminder/Ticketing/dst) dihapus
+  // saat repo ini dikonversi jadi Field Service & Proof of Execution platform.
+  // Menu modul Field Service ditambahkan ke sini begitu halamannya dibangun.
+  const allMenuItems: MenuItem[] = [];
 
   useEffect(() => {
     if (!currentUser) return;

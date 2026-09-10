@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser, isAdminRole } from '@/lib/server-auth';
 import { issueDbToken } from '@/lib/db-token';
 import { hasServiceRole, serviceRoleWajib } from '@/lib/supabase-admin';
-import { periksaKonfigurasiServices } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * /api/auth/db-token-check - apakah SUPABASE_JWT_SECRET yang dipasang benar?
  *
- * Ini pemeriksaan yang HARUS lolos sebelum sql/rls-project-progress.sql
- * dijalankan. Kalau rahasianya salah, PostgREST menolak setiap token, dan
- * begitu RLS menyala seluruh modul akan tampak kosong bagi semua orang.
+ * Ini pemeriksaan yang HARUS lolos sebelum RLS pada tabel manapun diaktifkan.
+ * Kalau rahasianya salah, PostgREST menolak setiap token, dan begitu RLS
+ * menyala seluruh modul akan tampak kosong bagi semua orang.
  *
  * Cara kerjanya: terbitkan token untuk pemanggil, lalu pakai token itu untuk
  * memanggil PostgREST sungguhan. Yang diuji bukan bentuk tokennya, melainkan
@@ -46,11 +45,7 @@ export async function GET(request: NextRequest) {
     },
     SUPABASE_SERVICE_ROLE_KEY: {
       ada: hasServiceRole(),
-      untuk: 'Dipakai route server & cron digest. Tanpa ini route server turun jadi anon tanpa galat apa pun, dan digest hanya melihat nol lokasi sehingga pesannya selalu kosong.',
-    },
-    NEXT_PUBLIC_SUPABASE_SERVICES_URL: {
-      ada: !!process.env.NEXT_PUBLIC_SUPABASE_SERVICES_URL,
-      untuk: 'Basis data Team Services (lintas organisasi). Tanpa ini seluruh alur assign ke Services di Ticketing gagal.',
+      untuk: 'Dipakai route server & cron. Tanpa ini route server turun jadi anon tanpa galat apa pun.',
     },
     CRON_SECRET: {
       ada: !!process.env.CRON_SECRET,
@@ -66,10 +61,9 @@ export async function GET(request: NextRequest) {
     .map(([k]) => k);
 
   /**
-   * Dua kondisi yang tidak terbaca dari daftar "ada / tidak ada" di atas,
-   * tapi diam-diam mengubah perilaku produksi.
+   * Kondisi yang tidak terbaca dari daftar "ada / tidak ada" di atas, tapi
+   * diam-diam mengubah perilaku produksi.
    */
-  const svc = periksaKonfigurasiServices();
   const peringatan: string[] = [];
   if (!hasServiceRole()) {
     peringatan.push(
@@ -81,14 +75,6 @@ export async function GET(request: NextRequest) {
     peringatan.push(
       'Service-role key sudah terpasang. Set REQUIRE_SERVICE_ROLE=1 supaya deploy ' +
       'berikutnya yang kehilangan key itu langsung gagal, bukan diam-diam turun jadi anon.',
-    );
-  }
-  if (svc.servicesBelumDiset) {
-    peringatan.push('Basis data Services belum terkonfigurasi — alur assign ke Team Services akan gagal.');
-  } else if (svc.urlSama) {
-    peringatan.push(
-      'URL basis data utama dan Services SAMA. Mirror ticket ke Services DB tidak ' +
-      'benar-benar menyeberang organisasi.',
     );
   }
 

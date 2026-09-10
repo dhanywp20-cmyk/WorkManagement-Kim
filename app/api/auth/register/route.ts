@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
         sales_division,
         jabatan,
         phone_number,
-        allowed_menus: bypass ? ['learning-center', 'reminder-schedule', 'ticket-troubleshooting', 'request-design-project', 'form-bast'] : [],
+        // Modul-modul lama (learning-center/reminder-schedule/dst) sudah dihapus
+        // saat repo ini dikonversi jadi Field Service platform - bypass tidak lagi
+        // memberi menu apa pun sampai menu Field Service ditambahkan di sini.
+        allowed_menus: [],
       }])
       .select('id')
       .single();

@@ -9,7 +9,10 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // geolocation=(self): dibutuhkan Field Service untuk GPS check-in/out
+          // (instruksi field-service §20, §27) — tetap diblokir untuk konteks
+          // pihak ketiga/iframe, hanya diizinkan untuk origin platform sendiri.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
           // Paksa HTTPS (Vercel selalu HTTPS). Reversible — tanpa preload.
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
           // CSP minimal yang AMAN (tidak membatasi script/style inline supaya app

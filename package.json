@@ -1,5 +1,5 @@
 {
-  "name": "team-ticketing-system",
+  "name": "field-service-platform",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -9,17 +9,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.39.0",
-    "@types/file-saver": "^2.0.7",
     "bcryptjs": "^3.0.3",
-    "exceljs": "^4.4.0",
-    "file-saver": "^2.0.5",
     "lucide-react": "^1.16.0",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "recharts": "2.12.7",
-    "xlsx": "^0.18.5",
-    "xlsx-js-style": "^1.2.0"
+    "recharts": "2.12.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

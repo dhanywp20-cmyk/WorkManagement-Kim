@@ -93,21 +93,11 @@ export { JABATAN_LIST, JABATAN_CONFIG, JABATAN_CC_RULES, type JabatanType } from
 
 // Account Settings Modal
 
+// Menu modul lama dihapus saat repo ini dikonversi jadi Field Service & Proof
+// of Execution platform. Tambahkan kunci menu Field Service di sini begitu
+// halamannya dibangun (lihat juga allMenuItems di app/dashboard/page.tsx).
 export const ALL_MENU_KEYS = [
   'dashboard',
-  'kpi-team',
-  'form-bast',
-  'request-design-project',
-  'ticket-troubleshooting',
-  'incentive-pts',
-  'project-progress',
-  'daily-report',
-  'database-pts',
-  'unit-movement',
-  'reminder-schedule',
-  'picket-showroom',
-  'learning-center',
-  'tech-note',
 ];
 
 /**
@@ -115,7 +105,7 @@ export const ALL_MENU_KEYS = [
  * Admin/superadmin tetap melihatnya (mereka bypass allowed_menus), tapi anggota
  * team baru harus diberi akses manual lewat Admin Panel.
  */
-export const RESTRICTED_MENU_KEYS = ['project-progress'];
+export const RESTRICTED_MENU_KEYS: string[] = [];
 
 /**
  * Default allowed_menus untuk user BARU. Sengaja dipisah dari ALL_MENU_KEYS:
@@ -144,30 +134,10 @@ export const DEFAULT_MENU_KEYS = ALL_MENU_KEYS.filter(k => !RESTRICTED_MENU_KEYS
  * ditugaskan jadwal dan tetap tercatat bagiannya di Incentive PTS - yang
  * berubah hanya apa yang ia lihat di layarnya sendiri.
  */
-export const SALES_MENU_KEYS = ALL_MENU_KEYS.filter(k => [
-  'dashboard',
-  'form-bast',
-  'request-design-project',
-  'ticket-troubleshooting',
-  'reminder-schedule',
-  'learning-center',
-].includes(k));
+export const SALES_MENU_KEYS = ALL_MENU_KEYS.filter(k => ['dashboard'].includes(k));
 
 export const ALL_MENU_LABELS: Record<string, { label: string; icon: string }> = {
-  'dashboard':              { label: 'Analytics Dashboard (KPI)', icon: '📊' },
-  'kpi-team':               { label: 'KPI Team', icon: '📊' },
-  'learning-center':        { label: 'Learning Center', icon: '🎓' },
-  'form-bast':              { label: 'Form Review Demo & BAST', icon: '⭐' },
-  'request-design-project': { label: 'Request Design Project', icon: '🏗️' },
-  'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫' },
-  'incentive-pts':          { label: 'Incentive Team PTS IVP', icon: '💰' },
-  'project-progress':       { label: 'Project Progress', icon: '📊' },
-  'daily-report':           { label: 'Daily Report', icon: '📈' },
-  'database-pts':           { label: 'Database PTS', icon: '💼' },
-  'unit-movement':          { label: 'Unit Movement Log', icon: '🚚' },
-  'reminder-schedule':      { label: 'Request Schedule', icon: '🗓️' },
-  'picket-showroom':        { label: 'Piket Showroom', icon: '🏪' },
-  'tech-note':              { label: 'Tech Note R&D', icon: '📝' },
+  'dashboard': { label: 'Dashboard', icon: '📊' },
 };
 
 export const ROLE_BADGE: Record<string, string> = {

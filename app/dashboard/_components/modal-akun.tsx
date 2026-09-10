@@ -76,21 +76,10 @@ export function AccountSettingsModal({ onClose }: AccountSettingsModalProps) {
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  // Menu modul lama dihapus bersama modulnya saat repo ini dikonversi jadi
+  // Field Service & Proof of Execution platform.
   const menuLabels: Record<string, { label: string; icon: string; gradient: string }> = {
-    'dashboard': { label: 'Analytics Dashboard (KPI)', icon: '📊', gradient: 'from-blue-600 to-indigo-500' },
-    'learning-center': { label: 'Learning Center', icon: '🎓', gradient: 'from-teal-600 to-teal-500' },
-    'form-bast': { label: 'Form Review Demo & BAST', icon: '⭐', gradient: 'from-slate-600 to-slate-500' },
-    'request-design-project': { label: 'Request Design Project', icon: '🏗️', gradient: 'from-violet-600 to-violet-500' },
-    'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫', gradient: 'from-rose-600 to-rose-500' },
-    'incentive-pts': { label: 'Incentive Team PTS IVP', icon: '💰', gradient: 'from-rose-600 to-rose-500' },
-    'project-progress': { label: 'Project Progress', icon: '📊', gradient: 'from-cyan-600 to-teal-500' },
-    'daily-report': { label: 'Daily Report', icon: '📈', gradient: 'from-emerald-600 to-emerald-500' },
-    'database-pts': { label: 'Database PTS', icon: '💼', gradient: 'from-indigo-600 to-indigo-500' },
-    'unit-movement': { label: 'Unit Movement Log', icon: '🚚', gradient: 'from-amber-600 to-amber-500' },
-    'reminder-schedule': { label: 'Request Schedule', icon: '🗓️', gradient: 'from-cyan-600 to-cyan-500' },
-    'picket-showroom': { label: 'Piket Showroom', icon: '🏪', gradient: 'from-teal-600 to-teal-500' },
-    'tech-note': { label: 'Tech Note R&D', icon: '📝', gradient: 'from-pink-600 to-rose-500' },
-    'kpi-team': { label: 'KPI Team', icon: '📊', gradient: 'from-sky-600 to-sky-500' },
+    'dashboard': { label: 'Dashboard', icon: '📊', gradient: 'from-blue-600 to-indigo-500' },
   };
 
   const notify = (type: 'success' | 'error', msg: string) => {
@@ -618,20 +607,7 @@ export function AccountSettingsInline() {
   const [editBisaDitugaskan, setEditBisaDitugaskan] = useState(true);
 
   const menuLabels: Record<string, { label: string; icon: string }> = {
-    'dashboard': { label: 'Analytics Dashboard (KPI)', icon: '📊' },
-    'form-bast': { label: 'Form Review Demo & BAST', icon: '⭐' },
-    'request-design-project': { label: 'Request Design Project', icon: '🏗️' },
-    'ticket-troubleshooting': { label: 'Ticket Troubleshooting', icon: '🎫' },
-    'incentive-pts': { label: 'Incentive Team PTS IVP', icon: '💰' },
-    'project-progress': { label: 'Project Progress', icon: '📊' },
-    'daily-report': { label: 'Daily Report', icon: '📈' },
-    'database-pts': { label: 'Database PTS', icon: '💼' },
-    'unit-movement': { label: 'Unit Movement Log', icon: '🚚' },
-    'reminder-schedule': { label: 'Request Schedule', icon: '🗓️' },
-    'picket-showroom': { label: 'Piket Showroom', icon: '🏪' },
-    'learning-center': { label: 'Learning Center', icon: '🎓' },
-    'tech-note': { label: 'Tech Note R&D', icon: '📝' },
-    'kpi-team': { label: 'KPI Team', icon: '📊' },
+    'dashboard': { label: 'Dashboard', icon: '📊' },
   };
 
   const notify = (type: 'success' | 'error', msg: string) => { setNotification({ type, msg }); setTimeout(() => setNotification(null), 3000); };
