@@ -1,0 +1,266 @@
+-- ============================================================================
+--  MEREK & DIVISI SALES - menutup penulisan app_settings
+-- ============================================================================
+--
+--  Merek platform (logo, nama, warna, latar) dan daftar divisi sales sekarang
+--  disimpan di app_settings, dibaca lib/merek.ts. Dua baris:
+--
+--      key = 'merek'             -> JSON berisi field yang BERBEDA dari bawaan
+--      key = 'sales_divisions'   -> JSON larik nama divisi
+--
+--  Keduanya tidak perlu diisi lebih dulu. Selama barisnya belum ada, platform
+--  memakai nilai bawaan di lib/merek.ts - yang PERSIS sama dengan tampilan
+--  selama ini. Barisnya lahir sendiri saat Admin Panel menekan Simpan.
+--
+--  YANG DIKERJAKAN BERKAS INI cuma satu: menutup PENULISAN app_settings.
+--
+--  Sebelum ini app_settings tidak punya RLS sama sekali. Artinya siapa pun yang
+--  memegang anon key - termasuk yang belum login - bisa menimpa isinya. Dulu
+--  taruhannya kecil (jadwal cron dan satu id manager). Sekarang tabel yang sama
+--  menentukan nama, logo, dan warna yang dilihat semua orang di halaman login.
+--
+--  PEMBACAAN SENGAJA DIBIARKAN TERBUKA. Halaman login membaca merek SEBELUM
+--  ada yang masuk, jadi tidak ada klaim identitas apa pun untuk diperiksa.
+--  Menutup pembacaan akan membuat halaman login kehilangan logo dan namanya.
+--
+--  Menjalankan berkas ini TIDAK langsung menyalakan apa pun - ia membuat
+--  fungsinya. Penyalaannya satu perintah:
+--
+--      SELECT kunci_app_settings();
+--
+--  Membatalkan, berlaku seketika tanpa deploy ulang:
+--
+--      SELECT buka_app_settings();
+--
+--  Melihat keadaan sekarang:
+--
+--      SELECT * FROM keadaan_app_settings();
+--
+--  Berkas ini JUGA membuat bucket penyimpanan `merek-files` untuk logo dan
+--  gambar latar - lihat bagian 6 di bawah. Bagian itu berjalan sendiri saat
+--  berkas dijalankan, tidak perlu perintah tambahan.
+--
+--  SYARAT: sql/rls-lingkup-project.sql sudah jalan - lingkup_semua() dari sana.
+-- ============================================================================
+
+-- 1. Siapa yang boleh menulis pengaturan
+
+--  Yang menulis app_settings hari ini ada tiga: Admin Panel (merek, divisi,
+--  manager_user_id) dan tombol jadwal reminder di Ticketing.
+--
+--  Tombol jadwal reminder itu terbuka untuk canApproveAssign, yang mencakup
+--  Manager PTS - dan Manager PTS ber-role 'team', BUKAN 'admin'. Karena itu
+--  syaratnya lingkup_semua() (admin/superadmin/team), bukan admin saja:
+--  membatasinya ke admin akan membuat Manager PTS diam-diam gagal menyimpan
+--  jadwal WA harian, tanpa pesan galat yang menjelaskan sebabnya.
+--
+--  Yang benar-benar ditutup adalah anon tanpa token, guest, dan sales.
+--  Kunci yang isinya rahasia dan TIDAK boleh terbaca dari peramban.
+--
+--  Dicocokkan dari namanya, bukan dari daftar tetap: kunci rahasia berikutnya
+--  hampir pasti bernama *_token / *_secret / *_key juga, dan daftar tetap
+--  berarti yang baru lolos diam-diam sampai ada yang memeriksanya lagi.
+CREATE OR REPLACE FUNCTION kunci_rahasia(k text)
+RETURNS boolean
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT k ~* '(token|secret|api_?key|password|credential)';
+$$;
+
+GRANT EXECUTE ON FUNCTION kunci_rahasia(text) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION boleh_tulis_pengaturan()
+RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT lingkup_semua();
+$$;
+
+GRANT EXECUTE ON FUNCTION boleh_tulis_pengaturan() TO anon, authenticated;
+
+-- 2. Menyalakan
+
+CREATE OR REPLACE FUNCTION kunci_app_settings()
+RETURNS text
+LANGUAGE plpgsql AS $$
+DECLARE
+  p record;
+  dibuang text[] := ARRAY[]::text[];
+BEGIN
+  IF to_regclass('public.app_settings') IS NULL THEN
+    RETURN 'app_settings tidak ada - tidak ada yang dikerjakan.';
+  END IF;
+
+  --  Policy lama dibuang lebih dulu dan namanya disebutkan. Policy permissive
+  --  di-OR satu sama lain: satu policy lama yang berbunyi USING (true) akan
+  --  membatalkan seluruh penyaringan di bawah, dan RLS akan tampak menyala
+  --  padahal tidak menyaring apa pun.
+  FOR p IN SELECT policyname FROM pg_policies
+           WHERE schemaname = 'public' AND tablename = 'app_settings'
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.app_settings', p.policyname);
+    dibuang := dibuang || p.policyname;
+  END LOOP;
+
+  ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+  --  Baca: terbuka, KECUALI baris rahasia.
+  --
+  --  Halaman login membaca merek sebelum ada yang masuk, jadi pembacaan
+  --  memang harus terbuka. Tapi "terbuka" tidak boleh berarti SELURUH isi
+  --  tabel: ditemukan baris `fonnte_token` berisi token WhatsApp dalam teks
+  --  polos, dan dengan policy lama (Allow all) siapa pun yang memegang anon
+  --  key - yang ikut terkirim ke peramban setiap kali halaman dibuka - bisa
+  --  membacanya. Diuji sebagai role anon tanpa token: tokennya terbaca utuh.
+  --
+  --  Karena itu kunci yang namanya menandakan rahasia disaring di sini juga,
+  --  bukan hanya diandalkan pada "jangan simpan rahasia di sini". Yang butuh
+  --  rahasia itu adalah Edge Function, dan ia memakai service_role yang
+  --  melewati RLS - jadi penyaringan ini tidak memutus jalur mana pun.
+  CREATE POLICY as_baca ON public.app_settings
+    FOR SELECT TO anon, authenticated
+    USING (NOT kunci_rahasia(key));
+
+  --  Tulis: per perintah, TANPA `FOR ALL`. `FOR ALL` di Postgres mencakup
+  --  SELECT juga, jadi satu policy FOR ALL akan ikut mengatur pembacaan dan
+  --  membuat baris di atas tidak berarti.
+  CREATE POLICY as_insert ON public.app_settings
+    FOR INSERT TO anon, authenticated WITH CHECK (boleh_tulis_pengaturan());
+  CREATE POLICY as_update ON public.app_settings
+    FOR UPDATE TO anon, authenticated
+    USING (boleh_tulis_pengaturan()) WITH CHECK (boleh_tulis_pengaturan());
+  CREATE POLICY as_delete ON public.app_settings
+    FOR DELETE TO anon, authenticated USING (boleh_tulis_pengaturan());
+
+  RETURN format(
+    'app_settings terkunci. Policy lama dibuang: %s. Baca tetap terbuka, tulis butuh admin/superadmin/team.',
+    CASE WHEN array_length(dibuang, 1) IS NULL THEN '(tidak ada)'
+         ELSE array_to_string(dibuang, ', ') END);
+END;
+$$;
+
+-- 3. Membatalkan
+
+CREATE OR REPLACE FUNCTION buka_app_settings()
+RETURNS text
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass('public.app_settings') IS NULL THEN
+    RETURN 'app_settings tidak ada.';
+  END IF;
+  ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;
+  RETURN 'RLS app_settings DIMATIKAN. Policy-nya dibiarkan - menyalakan lagi cukup SELECT kunci_app_settings().';
+END;
+$$;
+
+-- 4. Melihat keadaan
+
+CREATE OR REPLACE FUNCTION keadaan_app_settings()
+RETURNS TABLE(policy text, perintah text, syarat_baca text, syarat_tulis text)
+LANGUAGE sql STABLE AS $$
+  SELECT policyname::text, cmd::text, coalesce(qual, '-'), coalesce(with_check, '-')
+  FROM pg_policies
+  WHERE schemaname = 'public' AND tablename = 'app_settings'
+  ORDER BY cmd, policyname;
+$$;
+
+-- 5. Membaca isi pengaturan yang berlaku
+
+--  Berguna untuk memastikan apa yang benar-benar tersimpan, tanpa membuka
+--  Admin Panel. Baris yang belum ada berarti nilainya masih bawaan.
+CREATE OR REPLACE FUNCTION isi_pengaturan_merek()
+RETURNS TABLE(kunci text, isi text)
+LANGUAGE sql STABLE AS $$
+  SELECT key::text, coalesce(value::text, '(kosong)')
+  FROM public.app_settings
+  WHERE key IN ('merek', 'sales_divisions')
+  ORDER BY key;
+$$;
+
+
+-- 6. Bucket penyimpanan logo & gambar latar
+
+--  Logo dan gambar latar diunggah dari Admin Panel, bukan diketik URL-nya.
+--  Bucket ini publik: halaman login harus bisa memuat logo SEBELUM ada yang
+--  masuk, jadi tidak ada identitas apa pun untuk diperiksa saat gambarnya
+--  diminta.
+--
+--  Selama bucket ini belum ada, lib/merek.ts menjatuhkan unggahan ke
+--  `project-files` yang sudah dipakai platform - jadi tombol Unggah tetap
+--  berfungsi walau bagian ini belum dijalankan. Bucket sendiri tetap lebih
+--  baik: berkas merek tidak tercampur dengan lampiran project, sehingga
+--  audit storage bisa memisahkan keduanya.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'merek-files', 'merek-files', true,
+  8 * 1024 * 1024,
+  ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE
+  SET public             = EXCLUDED.public,
+      file_size_limit    = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+--  Membaca terbuka, menulis butuh identitas orang dalam - syarat yang sama
+--  dengan menulis pengaturannya sendiri. Tanpa policy tulis, tombol Unggah
+--  akan gagal diam-diam: RLS storage.objects menyala secara bawaan di
+--  Supabase, jadi bucket tanpa policy = tidak ada yang bisa menaruh berkas.
+DROP POLICY IF EXISTS merek_baca   ON storage.objects;
+DROP POLICY IF EXISTS merek_tulis  ON storage.objects;
+DROP POLICY IF EXISTS merek_ganti  ON storage.objects;
+DROP POLICY IF EXISTS merek_hapus  ON storage.objects;
+
+CREATE POLICY merek_baca ON storage.objects
+  FOR SELECT TO anon, authenticated
+  USING (bucket_id = 'merek-files');
+
+CREATE POLICY merek_tulis ON storage.objects
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (bucket_id = 'merek-files' AND boleh_tulis_pengaturan());
+
+CREATE POLICY merek_ganti ON storage.objects
+  FOR UPDATE TO anon, authenticated
+  USING (bucket_id = 'merek-files' AND boleh_tulis_pengaturan())
+  WITH CHECK (bucket_id = 'merek-files' AND boleh_tulis_pengaturan());
+
+CREATE POLICY merek_hapus ON storage.objects
+  FOR DELETE TO anon, authenticated
+  USING (bucket_id = 'merek-files' AND boleh_tulis_pengaturan());
+
+
+-- 7. Penjaga: rahasia tidak boleh masuk ke app_settings
+
+--  DITEMUKAN DI PRODUKSI: baris `fonnte_token` berisi token gateway WhatsApp
+--  dalam teks polos, di tabel yang policy lamanya `USING (true)`. Diuji
+--  sebagai role anon tanpa token: tokennya terbaca utuh. Anon key ikut
+--  terkirim ke peramban setiap kali halaman dibuka.
+--
+--  Menutup pembacaannya (bagian 2) saja tidak cukup. Baris rahasia berikutnya
+--  akan tersimpan diam-diam dan baru ketahuan saat ada yang memeriksa lagi.
+--  Karena itu ditolak di pintu masuk, dengan pesan yang menyebut tempat yang
+--  benar - bukan sekadar 'ditolak'.
+CREATE OR REPLACE FUNCTION tolak_rahasia_di_pengaturan()
+RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF kunci_rahasia(NEW.key) THEN
+    RAISE EXCEPTION
+      'app_settings bukan tempat menyimpan rahasia. Kunci "%" ditolak. Simpan token/secret sebagai environment variable Edge Function atau Vercel.',
+      NEW.key
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_tolak_rahasia_pengaturan ON public.app_settings;
+CREATE TRIGGER trg_tolak_rahasia_pengaturan
+  BEFORE INSERT OR UPDATE ON public.app_settings
+  FOR EACH ROW EXECUTE FUNCTION tolak_rahasia_di_pengaturan();
+
+--  Baris yang sudah terlanjur ada dibuang. Tidak ada satu baris kode pun yang
+--  membacanya: Edge Function swift-responder mengambil tokennya dari
+--  Deno.env FONNTE_TOKEN.
+--
+--      DELETE FROM app_settings WHERE key = 'fonnte_token';   -- sudah dijalankan
+--
+--  CATATAN: menutup pembacaan TIDAK membatalkan token yang sudah terlanjur
+--  terbuka. Tokennya wajib dirotasi di Fonnte, lalu FONNTE_TOKEN di secret
+--  Edge Function diperbarui.
