@@ -83,7 +83,7 @@ export function maskPhone(phone?: string): string {
 }
 
 export const KOLOM_PROFIL_DASAR =
-  'id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus,kpi_enabled,divisi,pts_type';
+  'id,username,full_name,role,team_type,phone_number,sales_division,jabatan,allowed_menus';
 
 /**
  * Ambil profil user, dengan jalur mundur bila created_at / access_level belum
